@@ -96,6 +96,9 @@ export function ClickUpSprintMenu({
   selection: ClickUpSprintSelection
   onSelectionChange: (selection: ClickUpSprintSelection) => void
 }): React.JSX.Element {
+  // Why: spaces like Chip1 run parallel sprint folders (Dev, Weekly, QE), so
+  // same-dated sprints need their folder to be told apart.
+  const showFolders = new Set(sprints.map((sprint) => sprint.folderName)).size > 1
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -104,7 +107,7 @@ export function ClickUpSprintMenu({
           <ChevronDown />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
+      <DropdownMenuContent align="start" className="w-80">
         <div className="max-h-80 overflow-y-auto scrollbar-sleek">
           <DropdownMenuRadioGroup
             value={sprintValue(selection)}
@@ -126,6 +129,11 @@ export function ClickUpSprintMenu({
             {sprints.map((sprint) => (
               <DropdownMenuRadioItem key={sprint.listId} value={`list:${sprint.listId}`}>
                 <span className="truncate">{sprint.name}</span>
+                {showFolders && sprint.folderName ? (
+                  <span className="ml-auto shrink-0 truncate pl-2 text-xs text-muted-foreground">
+                    {sprint.folderName}
+                  </span>
+                ) : null}
               </DropdownMenuRadioItem>
             ))}
           </DropdownMenuRadioGroup>

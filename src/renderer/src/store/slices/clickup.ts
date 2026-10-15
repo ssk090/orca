@@ -1,13 +1,6 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../types'
-import type {
-  ClickUpConnectionStatus,
-  ClickUpTask,
-  ClickUpTaskFilter,
-  ClickUpViewer,
-  ClickUpWorkspaceSelection
-} from '../../../../shared/clickup-types'
-import type { CacheEntry } from '../github/cache-model'
+import type { ClickUpTask } from '../../../../shared/clickup-types'
 import {
   clickUpConnect,
   clickUpDisconnect,
@@ -19,16 +12,17 @@ import {
   clickUpTestConnection
 } from '@/runtime/runtime-clickup-client'
 import { getProviderRuntimeContextKey } from '@/lib/provider-runtime-context'
-import type { TaskSourceContext } from '../../../../shared/task-source-context'
+import {
+  getTaskSourceCacheScope,
+  getTaskSourceRuntimeSettings,
+  type TaskSourceContext
+} from '../../../../shared/task-source-context'
 import { patchClickUpCaches } from './clickup-task-cache-patch'
+import { selectedWorkspaceId, taskScopeKey, type ClickUpSlice } from './clickup-slice-types'
+
+export type { ClickUpSlice } from './clickup-slice-types'
 import {
-  getReadScope,
-  scopedKey,
-  selectedWorkspaceId,
-  taskScopeKey,
-  type ClickUpReadOptions
-} from './clickup-read-scope'
-import {
+  clickUpCacheKey,
   evictStaleClickUpCacheEntries,
   isFreshClickUpCacheEntry
 } from './clickup-task-cache-policy'
@@ -37,43 +31,36 @@ let mutationGeneration = 0
 const statusInflight = new Map<string, Promise<void>>()
 const taskInflight = new Map<string, Promise<ClickUpTask | null>>()
 
-export type ClickUpSlice = {
-  clickUpStatus: ClickUpConnectionStatus
-  clickUpStatusChecked: boolean
-  clickUpStatusContextKey: string | null
-  clickUpTaskCache: Record<string, CacheEntry<ClickUpTask>>
-  clickUpSearchCache: Record<string, CacheEntry<ClickUpTask[]>>
-  clickUpListCache: Record<string, CacheEntry<ClickUpTask[]>>
+type ClickUpReadScope = {
+  settings: AppState['settings'] | TaskSourceContext | null
+  contextKey: string
+  cachePrefix: string | null
+  explicitSource: boolean
+}
 
-  checkClickUpConnection: (force?: boolean) => Promise<void>
-  connectClickUp: (
-    apiToken: string
-  ) => Promise<{ ok: true; viewer: ClickUpViewer } | { ok: false; error: string }>
-  testClickUpConnection: () => Promise<
-    { ok: true; viewer: ClickUpViewer } | { ok: false; error: string }
-  >
-  disconnectClickUp: () => Promise<void>
-  selectClickUpWorkspace: (workspaceId: ClickUpWorkspaceSelection) => Promise<void>
-  fetchClickUpTask: (
-    taskId: string,
-    workspaceId?: string | null,
-    options?: ClickUpReadOptions
-  ) => Promise<ClickUpTask | null>
-  searchClickUpTasks: (
-    query: string,
-    limit?: number,
-    options?: ClickUpReadOptions
-  ) => Promise<ClickUpTask[]>
-  listClickUpTasks: (
-    filter?: ClickUpTaskFilter,
-    limit?: number,
-    options?: ClickUpReadOptions
-  ) => Promise<ClickUpTask[]>
-  patchClickUpTask: (
-    taskId: string,
-    patch: Partial<ClickUpTask>,
-    sourceContext?: TaskSourceContext | null
-  ) => void
+function getReadScope(
+  settings: AppState['settings'],
+  sourceContext?: TaskSourceContext | null
+): ClickUpReadScope {
+  if (!sourceContext) {
+    return {
+      settings,
+      contextKey: getProviderRuntimeContextKey(settings),
+      cachePrefix: null,
+      explicitSource: false
+    }
+  }
+  const runtimeSettings = getTaskSourceRuntimeSettings(sourceContext)
+  return {
+    settings: sourceContext,
+    contextKey: `${getProviderRuntimeContextKey(runtimeSettings)}::${getTaskSourceCacheScope(sourceContext)}`,
+    cachePrefix: getTaskSourceCacheScope(sourceContext),
+    explicitSource: true
+  }
+}
+
+function scopedKey(scope: ClickUpReadScope, key: string): string {
+  return clickUpCacheKey(scope.cachePrefix, key)
 }
 
 export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = (set, get) => ({

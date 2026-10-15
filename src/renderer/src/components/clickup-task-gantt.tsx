@@ -148,16 +148,19 @@ export function ClickUpTaskGantt({
           ) : null}
           {layout.groups.map((group) => (
             <div key={group.key}>
-              <div className="sticky left-0 flex h-7 items-center gap-2 border-b border-border bg-muted/50 px-3 text-xs font-medium text-foreground">
-                {group.color ? (
-                  <span
-                    aria-hidden
-                    className="size-2 rounded-full"
-                    style={{ backgroundColor: group.color }}
-                  />
-                ) : null}
-                {group.label}
-                <span className="text-muted-foreground">{group.bars.length}</span>
+              {/* Why: sticky only pins the inner label; a full-width row cannot stick. */}
+              <div className="h-7 border-b border-border bg-muted/50">
+                <div className="sticky left-0 flex h-full w-fit items-center gap-2 px-3 text-xs font-medium text-foreground">
+                  {group.color ? (
+                    <span
+                      aria-hidden
+                      className="size-2 rounded-full"
+                      style={{ backgroundColor: group.color }}
+                    />
+                  ) : null}
+                  {group.label}
+                  <span className="text-muted-foreground">{group.bars.length}</span>
+                </div>
               </div>
               {group.bars.map((bar) => (
                 <div
@@ -199,24 +202,31 @@ export function ClickUpTaskGantt({
           ))}
           {layout.unscheduled.length > 0 ? (
             <div>
-              <div className="sticky left-0 flex h-7 items-center gap-2 border-b border-border bg-muted/50 px-3 text-xs font-medium text-foreground">
-                {translate('auto.components.clickup.gantt.unscheduled', 'Unscheduled')}
-                <span className="text-muted-foreground">{layout.unscheduled.length}</span>
+              <div className="h-7 border-b border-border bg-muted/50">
+                <div className="sticky left-0 flex h-full w-fit items-center gap-2 px-3 text-xs font-medium text-foreground">
+                  {translate('auto.components.clickup.gantt.unscheduled', 'Unscheduled')}
+                  <span className="text-muted-foreground">{layout.unscheduled.length}</span>
+                </div>
               </div>
               {layout.unscheduled.map((task) => (
-                <button
+                <div
                   key={task.id}
-                  type="button"
-                  onClick={() => onOpenTask(task)}
-                  className="sticky left-0 flex w-full items-center gap-2 border-b border-border/60 px-3 text-left text-xs hover:bg-accent"
-                  style={{ height: ROW_HEIGHT, maxWidth: LABEL_WIDTH + timelineWidth }}
+                  className="border-b border-border/60"
+                  style={{ height: ROW_HEIGHT }}
                 >
-                  <span className="shrink-0 font-mono text-muted-foreground">
-                    {clickUpTaskReference(task)}
-                  </span>
-                  <span className="truncate text-foreground">{task.name}</span>
-                  <span className="shrink-0 text-muted-foreground">{task.status.name}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => onOpenTask(task)}
+                    className="sticky left-0 flex h-full items-center gap-2 px-3 text-left text-xs hover:bg-accent"
+                    style={{ width: LABEL_WIDTH * 2 }}
+                  >
+                    <span className="shrink-0 font-mono text-muted-foreground">
+                      {clickUpTaskReference(task)}
+                    </span>
+                    <span className="truncate text-foreground">{task.name}</span>
+                    <span className="shrink-0 text-muted-foreground">{task.status.name}</span>
+                  </button>
+                </div>
               ))}
             </div>
           ) : null}
