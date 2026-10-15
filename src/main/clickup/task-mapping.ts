@@ -7,11 +7,7 @@ import type {
 } from '../../shared/clickup-types'
 import { getStatus, type ClickUpClientForWorkspace } from './client'
 
-export type JsonRecord = Record<string, unknown>
-
-export function asRecord(value: unknown): JsonRecord | null {
-  return value !== null && typeof value === 'object' ? (value as JsonRecord) : null
-}
+export { asRecord, type JsonRecord } from './json-record'
 
 export function asString(value: unknown): string | undefined {
   if (typeof value === 'string') {

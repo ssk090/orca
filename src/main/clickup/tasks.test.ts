@@ -170,6 +170,7 @@ describe('ClickUp task operations', () => {
     const updateCall = clickUpRequestMock.mock.calls.find(
       (call) => call[1] === '/task/abc' && call[2]?.method === 'PUT'
     )
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the mocked request receives a JSON string body built by updateTask.
     expect(JSON.parse(updateCall?.[2].body as string)).toEqual({
       status: 'review',
       priority: 1,

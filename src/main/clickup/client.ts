@@ -1,5 +1,6 @@
 import { ensureElectronProxyFromEnvironment } from '../network/proxy-settings'
 import { getMainHttpClient } from '../network/http-client'
+import { asRecord } from './json-record'
 import type {
   ClickUpConnectionStatus,
   ClickUpViewer,
@@ -60,8 +61,8 @@ function release(): void {
 
 async function readApiError(response: Response): Promise<string> {
   try {
-    const data = (await response.json()) as { err?: string; error?: string; message?: string }
-    const message = data.err ?? data.error ?? data.message
+    const data = asRecord(await response.json())
+    const message = data?.err ?? data?.error ?? data?.message
     if (typeof message === 'string' && message.trim()) {
       return message
     }
@@ -96,8 +97,10 @@ async function requestWithToken<T>(token: string, path: string, init?: RequestIn
     throw new ClickUpApiError(await readApiError(response), response.status)
   }
   if (response.status === 204) {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: ClickUp answers 204 only for void mutations, whose callers type T as null or ignore it.
     return null as T
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: callers name the ClickUp v2 response shape and read it through asRecord/asString guards.
   return (await response.json()) as T
 }
 

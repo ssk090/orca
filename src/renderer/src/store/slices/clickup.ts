@@ -73,7 +73,8 @@ function selectedWorkspaceId(status: ClickUpConnectionStatus): ClickUpWorkspaceS
 }
 
 let mutationGeneration = 0
-const inflight = new Map<string, Promise<unknown>>()
+const statusInflight = new Map<string, Promise<void>>()
+const taskInflight = new Map<string, Promise<ClickUpTask | null>>()
 
 export type ClickUpSlice = {
   clickUpStatus: ClickUpConnectionStatus
@@ -125,7 +126,7 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
   checkClickUpConnection: async (force = false) => {
     const contextKey = getProviderRuntimeContextKey(get().settings)
     const key = `status::${contextKey}`
-    const existing = inflight.get(key) as Promise<void> | undefined
+    const existing = statusInflight.get(key)
     if (existing && !force) {
       return existing
     }
@@ -165,11 +166,11 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
         }
       })
       .finally(() => {
-        if (inflight.get(key) === request) {
-          inflight.delete(key)
+        if (statusInflight.get(key) === request) {
+          statusInflight.delete(key)
         }
       })
-    inflight.set(key, request)
+    statusInflight.set(key, request)
     return request
   },
 
@@ -225,7 +226,7 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
     if (!options?.force && isFreshClickUpCacheEntry(cached)) {
       return cached.data
     }
-    const existing = inflight.get(key) as Promise<ClickUpTask | null> | undefined
+    const existing = taskInflight.get(key)
     if (existing && !options?.force) {
       return existing
     }
@@ -247,11 +248,11 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
         return task
       })
       .finally(() => {
-        if (inflight.get(key) === request) {
-          inflight.delete(key)
+        if (taskInflight.get(key) === request) {
+          taskInflight.delete(key)
         }
       })
-    inflight.set(key, request)
+    taskInflight.set(key, request)
     return request
   },
 

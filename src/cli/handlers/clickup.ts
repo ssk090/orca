@@ -7,6 +7,7 @@ import type {
   ClickUpTaskFilter
 } from '../../shared/clickup-types'
 import type { RuntimeWorktreeRecord } from '../../shared/runtime-types'
+import { isClickUpTaskFilter } from '../../shared/clickup-task-filter'
 import { parseClickUpTaskReference } from '../clickup-task-reference'
 import type { CommandHandler } from '../dispatch'
 import { printResult } from '../format'
@@ -27,7 +28,6 @@ import {
 } from '../clickup-format'
 
 const PRIORITIES: Record<string, number> = { urgent: 1, high: 2, normal: 3, low: 4 }
-const FILTERS = new Set<ClickUpTaskFilter>(['assigned', 'created', 'all', 'completed', 'open'])
 
 async function resolveTaskTarget({
   flags,
@@ -82,13 +82,13 @@ function getFilter(flags: Map<string, string | boolean>): ClickUpTaskFilter | un
     return undefined
   }
   const normalized = value.toLowerCase()
-  if (!FILTERS.has(normalized as ClickUpTaskFilter)) {
+  if (!isClickUpTaskFilter(normalized)) {
     throw new RuntimeClientError(
       'invalid_argument',
       '--filter must be assigned, created, all, completed, or open.'
     )
   }
-  return normalized as ClickUpTaskFilter
+  return normalized
 }
 
 function getPriority(flags: Map<string, string | boolean>, name: string): number {

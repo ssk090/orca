@@ -144,9 +144,7 @@ export function ClickUpCreateTaskDialog({
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label className="text-xs">
-              {translate('auto.components.clickup.create.list', 'List')}
-            </Label>
+            <Label>{translate('auto.components.clickup.create.list', 'List')}</Label>
             <Select value={listId} onValueChange={setListId} disabled={listsLoading}>
               <SelectTrigger>
                 <SelectValue
@@ -167,7 +165,7 @@ export function ClickUpCreateTaskDialog({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="clickup-create-name" className="text-xs">
+            <Label htmlFor="clickup-create-name">
               {translate('auto.components.clickup.create.name', 'Name')}
             </Label>
             <Input
@@ -179,7 +177,7 @@ export function ClickUpCreateTaskDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="clickup-create-description" className="text-xs">
+            <Label htmlFor="clickup-create-description">
               {translate('auto.components.clickup.create.taskDescription', 'Description')}
             </Label>
             <textarea

@@ -13,26 +13,21 @@ import {
   updateTask
 } from '../clickup/tasks'
 import { _resetPreflightCache } from './preflight'
+import { asRecord } from '../clickup/json-record'
+import { isClickUpTaskFilter } from '../../shared/clickup-task-filter'
 import type {
   ClickUpCreateTaskArgs,
   ClickUpTaskFilter,
   ClickUpTaskUpdate,
   ClickUpWorkspaceSelection
 } from '../../shared/clickup-types'
-const VALID_FILTERS = new Set<ClickUpTaskFilter>([
-  'assigned',
-  'created',
-  'all',
-  'completed',
-  'open'
-])
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
 
 function workspaceSelection(value: unknown): ClickUpWorkspaceSelection | undefined {
-  return optionalString(value) as ClickUpWorkspaceSelection | undefined
+  return optionalString(value)
 }
 
 function clampLimit(value: unknown, fallback: number): number {
@@ -50,48 +45,63 @@ function validStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string')
 }
 
+function isOptionalString(value: unknown): value is string | undefined {
+  return value === undefined || typeof value === 'string'
+}
+
+function isNullablePriority(value: unknown): value is number | null | undefined {
+  return (
+    value === undefined ||
+    value === null ||
+    (typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 4)
+  )
+}
+
+function isNullableDueDate(value: unknown): value is string | null | undefined {
+  return (
+    value === undefined ||
+    value === null ||
+    (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value))
+  )
+}
+
+function isNullableEstimate(value: unknown): value is number | null | undefined {
+  return (
+    value === undefined ||
+    value === null ||
+    (typeof value === 'number' && Number.isFinite(value) && value >= 0)
+  )
+}
+
 function normalizeTaskUpdate(value: unknown): ClickUpTaskUpdate | null {
-  if (!value || typeof value !== 'object') {
+  const record = asRecord(value)
+  if (!record) {
     return null
   }
-  const update = value as ClickUpTaskUpdate
-  if (update.name !== undefined && typeof update.name !== 'string') {
-    return null
-  }
-  if (update.description !== undefined && typeof update.description !== 'string') {
-    return null
-  }
-  if (update.status !== undefined && typeof update.status !== 'string') {
-    return null
-  }
+  const { name, description, status, priority, dueDate, timeEstimate, assigneeIds, tagNames } =
+    record
   if (
-    update.priority !== undefined &&
-    update.priority !== null &&
-    (!Number.isInteger(update.priority) || update.priority < 1 || update.priority > 4)
+    !isOptionalString(name) ||
+    !isOptionalString(description) ||
+    !isOptionalString(status) ||
+    !isNullablePriority(priority) ||
+    !isNullableDueDate(dueDate) ||
+    !isNullableEstimate(timeEstimate) ||
+    (assigneeIds !== undefined && !validNumberArray(assigneeIds)) ||
+    (tagNames !== undefined && !validStringArray(tagNames))
   ) {
     return null
   }
-  if (
-    update.dueDate !== undefined &&
-    update.dueDate !== null &&
-    (typeof update.dueDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(update.dueDate))
-  ) {
-    return null
+  return {
+    ...(name !== undefined ? { name } : {}),
+    ...(description !== undefined ? { description } : {}),
+    ...(status !== undefined ? { status } : {}),
+    ...(priority !== undefined ? { priority } : {}),
+    ...(dueDate !== undefined ? { dueDate } : {}),
+    ...(timeEstimate !== undefined ? { timeEstimate } : {}),
+    ...(assigneeIds !== undefined ? { assigneeIds } : {}),
+    ...(tagNames !== undefined ? { tagNames } : {})
   }
-  if (
-    update.timeEstimate !== undefined &&
-    update.timeEstimate !== null &&
-    (!Number.isFinite(update.timeEstimate) || update.timeEstimate < 0)
-  ) {
-    return null
-  }
-  if (update.assigneeIds !== undefined && !validNumberArray(update.assigneeIds)) {
-    return null
-  }
-  if (update.tagNames !== undefined && !validStringArray(update.tagNames)) {
-    return null
-  }
-  return update
 }
 
 export function registerClickUpHandlers(): void {
@@ -149,9 +159,7 @@ export function registerClickUpHandlers(): void {
         workspaceId?: ClickUpWorkspaceSelection
       }
     ) => {
-      const filter = VALID_FILTERS.has(args?.filter as ClickUpTaskFilter)
-        ? (args!.filter as ClickUpTaskFilter)
-        : undefined
+      const filter = isClickUpTaskFilter(args?.filter) ? args?.filter : undefined
       return listTasks(filter, clampLimit(args?.limit, 50), workspaceSelection(args?.workspaceId))
     }
   )

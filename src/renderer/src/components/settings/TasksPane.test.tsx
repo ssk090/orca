@@ -22,7 +22,9 @@ const mocks = vi.hoisted(() => ({
     checking: boolean
     onOpenIntegrations: () => void
   }[],
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: empty fixture array typed for captured setup props.
   jiraSetupProps: [] as { onOpenIntegrations: () => void }[],
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: empty fixture array typed for captured setup props.
   clickUpSetupProps: [] as { onOpenIntegrations: () => void }[]
 }))
 

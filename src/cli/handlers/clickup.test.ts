@@ -4,6 +4,7 @@ import { CLICKUP_HANDLERS } from './clickup'
 
 describe('orca clickup CLI handlers', () => {
   const call = vi.fn()
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the handlers call only RuntimeClient.call and isRemote, both stubbed here.
   const client = { call, isRemote: false } as unknown as RuntimeClient
   const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
 

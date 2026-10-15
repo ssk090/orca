@@ -29,6 +29,7 @@ vi.mock('@/runtime/runtime-clickup-client', () => ({
 function createTestStore() {
   return create<AppState>()(
     (...args) =>
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the ClickUp slice reads only the settings and actions this harness provides.
       ({
         settings: null,
         ...createClickUpSlice(...args)
@@ -82,6 +83,7 @@ describe('createClickUpSlice', () => {
     const store = createTestStore()
 
     const first = store.getState().checkClickUpConnection()
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the slice only reads activeRuntimeEnvironmentId from settings.
     store.setState({ settings: { activeRuntimeEnvironmentId: 'runtime-1' } as never })
     await store.getState().checkClickUpConnection()
     resolveLocal({ connected: true, viewer: { id: 1, username: 'Local', email: null } })

@@ -10,6 +10,7 @@ function makeRequest(method: string, params?: unknown): RpcRequest {
 
 describe('ClickUp RPC methods', () => {
   it('routes account, task, mutation, and metadata methods', async () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the ClickUp RPC methods call only the runtime members stubbed here.
     const runtime = {
       getRuntimeId: () => 'test-runtime',
       clickUpStatus: vi.fn().mockResolvedValue({ connected: true, viewer: null }),
@@ -88,6 +89,7 @@ describe('ClickUp RPC methods', () => {
   })
 
   it('rejects malformed priorities and due dates before runtime dispatch', async () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the ClickUp RPC methods call only the runtime members stubbed here.
     const runtime = {
       getRuntimeId: () => 'test-runtime',
       clickUpUpdateTask: vi.fn()

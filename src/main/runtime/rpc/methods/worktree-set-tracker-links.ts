@@ -1,10 +1,15 @@
-import type { z } from 'zod'
-import type { WorktreeSet } from '../../../../shared/rpc-contract/worktree-params'
-
-type WorktreeSetParams = z.infer<typeof WorktreeSet>
+type WorktreeSetTrackerLinks = {
+  linkedLinearIssue?: string | null
+  linkedLinearIssueWorkspaceId?: string | null
+  linkedLinearIssueOrganizationUrlKey?: string | null
+  linkedClickUpTaskId?: string | null
+  linkedClickUpWorkspaceId?: string | null
+}
 
 /** Linear and ClickUp links travel as legacy meta fields; undefined leaves the stored link untouched. */
-export function pickWorktreeSetTrackerLinks(params: WorktreeSetParams) {
+export function pickWorktreeSetTrackerLinks(
+  params: WorktreeSetTrackerLinks
+): WorktreeSetTrackerLinks {
   return {
     linkedLinearIssue: params.linkedLinearIssue,
     linkedLinearIssueWorkspaceId: params.linkedLinearIssueWorkspaceId,

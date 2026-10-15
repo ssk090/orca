@@ -160,6 +160,7 @@ export class RuntimeEdgeCommandController {
       getCommands: () => args.getBrowserCommands?.() ?? this.browser
     })
     this.emulator = new RuntimeEmulatorCommands(args.emulatorHost)
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the spreads bind every public method of the command classes RuntimeEdgeCommandSurface is built from; the binders' return types cannot spell the prefixed keys.
     this.surface = {
       ...bindPrefixedMethods(this.jira, 'jira'),
       ...bindPrefixedMethods(this.clickUp, 'clickUp'),

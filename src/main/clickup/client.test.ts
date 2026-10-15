@@ -31,6 +31,7 @@ describe('ClickUp client', () => {
     const { setMainHttpClient } = await import('../network/http-client')
     setMainHttpClient({
       fetch: (url, init) => fetchMock(url, init),
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the client never uses the proxy session beyond passing it to the mocked proxy setup.
       proxySession: () => ({}) as never
     })
     ensureProxyMock.mockResolvedValue(undefined)

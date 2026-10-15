@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { asRecord } from './json-record'
 
 import {
   CredentialDecryptionError,
@@ -46,11 +47,8 @@ function ensureOrcaDirectory(): void {
 }
 
 export function normalizeClickUpViewer(value: unknown): ClickUpViewer | null {
-  if (!value || typeof value !== 'object') {
-    return null
-  }
-  const record = value as Record<string, unknown>
-  if (typeof record.id !== 'number' || typeof record.username !== 'string') {
+  const record = asRecord(value)
+  if (!record || typeof record.id !== 'number' || typeof record.username !== 'string') {
     return null
   }
   return {
@@ -63,11 +61,9 @@ export function normalizeClickUpViewer(value: unknown): ClickUpViewer | null {
 }
 
 export function normalizeClickUpWorkspace(value: unknown): ClickUpWorkspace | null {
-  if (!value || typeof value !== 'object') {
-    return null
-  }
-  const record = value as Record<string, unknown>
+  const record = asRecord(value)
   if (
+    !record ||
     (typeof record.id !== 'string' && typeof record.id !== 'number') ||
     typeof record.name !== 'string'
   ) {
@@ -92,7 +88,7 @@ export function readClickUpAccount(): ClickUpAccountFile | null {
     return null
   }
   try {
-    const parsed = JSON.parse(readFileSync(accountPath(), 'utf8')) as Partial<ClickUpAccountFile>
+    const parsed = asRecord(JSON.parse(readFileSync(accountPath(), 'utf8'))) ?? {}
     const viewer = normalizeClickUpViewer(parsed.viewer)
     const workspaces = Array.isArray(parsed.workspaces)
       ? parsed.workspaces

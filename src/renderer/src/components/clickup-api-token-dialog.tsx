@@ -82,7 +82,7 @@ export function ClickUpApiTokenDialog({
           }
         }}
       >
-        <DialogHeader className="gap-3">
+        <DialogHeader>
           <DialogTitle>
             {translate('auto.components.clickup.dialog.title', 'Connect ClickUp')}
           </DialogTitle>
@@ -95,7 +95,7 @@ export function ClickUpApiTokenDialog({
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label htmlFor={inputId} className="text-xs">
+            <Label htmlFor={inputId}>
               {translate('auto.components.clickup.dialog.tokenLabel', 'Personal API token')}
             </Label>
             <Input

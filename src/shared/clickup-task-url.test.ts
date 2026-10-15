@@ -73,6 +73,7 @@ describe('buildClickUpTaskUrl', () => {
 })
 
 describe('isResolvedClickUpTaskMatch', () => {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the matcher reads only the task fields this fixture sets.
   const task = {
     id: '86abc123',
     customId: 'ORCA-42',

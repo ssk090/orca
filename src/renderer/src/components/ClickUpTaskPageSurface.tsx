@@ -6,6 +6,7 @@ import type {
   ClickUpTaskFilter,
   ClickUpWorkspaceSelection
 } from '../../../shared/clickup-types'
+import { isClickUpTaskFilter } from '../../../shared/clickup-task-filter'
 import type { TaskSourceContext } from '../../../shared/task-source-context'
 import type { LinkedWorkItemSummary } from '@/lib/new-workspace'
 import { getLinkedWorkItemSuggestedName } from '../../../shared/workspace-name'
@@ -205,7 +206,14 @@ export function ClickUpTaskPageSurface({
             </SelectContent>
           </Select>
         ) : null}
-        <Select value={filter} onValueChange={(value) => setFilter(value as ClickUpTaskFilter)}>
+        <Select
+          value={filter}
+          onValueChange={(value) => {
+            if (isClickUpTaskFilter(value)) {
+              setFilter(value)
+            }
+          }}
+        >
           <SelectTrigger className="h-8 w-[160px]">
             <SelectValue />
           </SelectTrigger>
@@ -218,13 +226,13 @@ export function ClickUpTaskPageSurface({
           </SelectContent>
         </Select>
         <form
-          className="relative min-w-[220px] flex-1"
+          className="flex min-w-[220px] flex-1 items-center gap-2"
           onSubmit={(event) => {
             event.preventDefault()
             setAppliedQuery(query.trim())
           }}
         >
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Search className="size-3.5 shrink-0 text-muted-foreground" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -232,7 +240,7 @@ export function ClickUpTaskPageSurface({
               'auto.components.clickup.page.searchPlaceholder',
               'Search ClickUp tasks…'
             )}
-            className="h-8 pl-8 pr-8"
+            className="h-8"
           />
           {query || appliedQuery ? (
             <button
@@ -242,7 +250,7 @@ export function ClickUpTaskPageSurface({
                 setQuery('')
                 setAppliedQuery('')
               }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="shrink-0 text-muted-foreground hover:text-foreground"
             >
               <X className="size-3.5" />
             </button>

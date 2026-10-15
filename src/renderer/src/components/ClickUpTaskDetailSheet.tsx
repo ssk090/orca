@@ -179,17 +179,19 @@ export function ClickUpTaskDetailSheet({
       <SheetContent className="min-w-[min(92vw,560px)]">
         {task ? (
           <>
-            <SheetHeader className="border-b border-border pr-12">
-              <SheetTitle>{task.customId ?? task.id}</SheetTitle>
-              <SheetDescription>
-                {[task.workspaceName, task.space?.name, task.folder?.name, task.list.name]
-                  .filter(Boolean)
-                  .join(' / ')}
-              </SheetDescription>
-            </SheetHeader>
+            <div className="border-b border-border pr-12">
+              <SheetHeader>
+                <SheetTitle>{task.customId ?? task.id}</SheetTitle>
+                <SheetDescription>
+                  {[task.workspaceName, task.space?.name, task.folder?.name, task.list.name]
+                    .filter(Boolean)
+                    .join(' / ')}
+                </SheetDescription>
+              </SheetHeader>
+            </div>
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 scrollbar-sleek">
               <div className="space-y-2">
-                <Label htmlFor="clickup-detail-name" className="text-xs">
+                <Label htmlFor="clickup-detail-name">
                   {translate('auto.components.clickup.detail.name', 'Name')}
                 </Label>
                 <Input
@@ -199,7 +201,7 @@ export function ClickUpTaskDetailSheet({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="clickup-detail-description" className="text-xs">
+                <Label htmlFor="clickup-detail-description">
                   {translate('auto.components.clickup.detail.description', 'Description')}
                 </Label>
                 <Textarea
@@ -212,9 +214,7 @@ export function ClickUpTaskDetailSheet({
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label className="text-xs">
-                    {translate('auto.components.clickup.detail.status', 'Status')}
-                  </Label>
+                  <Label>{translate('auto.components.clickup.detail.status', 'Status')}</Label>
                   <Select value={status} onValueChange={setStatus}>
                     <SelectTrigger>
                       <SelectValue />
@@ -229,9 +229,7 @@ export function ClickUpTaskDetailSheet({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">
-                    {translate('auto.components.clickup.detail.priority', 'Priority')}
-                  </Label>
+                  <Label>{translate('auto.components.clickup.detail.priority', 'Priority')}</Label>
                   <Select value={priority} onValueChange={setPriority}>
                     <SelectTrigger>
                       <SelectValue />
@@ -256,7 +254,7 @@ export function ClickUpTaskDetailSheet({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="clickup-detail-due-date" className="text-xs">
+                  <Label htmlFor="clickup-detail-due-date">
                     {translate('auto.components.clickup.detail.dueDate', 'Due date')}
                   </Label>
                   <Input

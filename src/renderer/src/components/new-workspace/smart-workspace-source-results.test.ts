@@ -340,6 +340,7 @@ describe('Branch source results', () => {
   })
 
   it('adds ClickUp tasks to Smart source results with workspace-scoped values', () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the row builder reads only the task fields this fixture sets.
     const task = {
       id: '86abc123',
       workspaceId: 'team-1',
