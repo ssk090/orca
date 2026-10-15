@@ -18138,7 +18138,7 @@
           "instructions": "Create the token from ClickUp Settings → Apps. Personal tokens inherit your account permissions.",
           "openSettings": "Open ClickUp settings",
           "remoteStorage": "The active remote runtime stores this token with runtime-supported encryption.",
-          "localStorage": "This device stores the token with Electron encrypted storage when available.",
+          "deviceStorage": "This device stores the token with Electron encrypted storage when available.",
           "cancel": "Cancel",
           "connecting": "Connecting…",
           "connect": "Connect"

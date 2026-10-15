@@ -140,7 +140,7 @@ export function ClickUpApiTokenDialog({
                   'The active remote runtime stores this token with runtime-supported encryption.'
                 )
               : translate(
-                  'auto.components.clickup.dialog.localStorage',
+                  'auto.components.clickup.dialog.deviceStorage',
                   'This device stores the token with Electron encrypted storage when available.'
                 )}
           </p>
