@@ -9,7 +9,7 @@ import type {
   ClickUpWorkspaceSelection
 } from '../../shared/clickup-types'
 import { getClickUpTask } from './task-lookup'
-import { appendClickUpTaskScope } from './task-scope'
+import { clickUpTaskPagePath } from './task-scope'
 import {
   clickUpRequest,
   getStatus,
@@ -39,9 +39,8 @@ const MAX_SCOPED_LIST_RESULTS = 500
 function queryForTaskPage(
   page: number,
   filter: ClickUpTaskFilter,
-  viewerId: number | undefined,
-  scope?: ClickUpTaskScope
-): string {
+  viewerId: number | undefined
+): URLSearchParams {
   const query = new URLSearchParams({
     page: String(page),
     // Why no reverse: ClickUp already sorts newest first; reverse=true returned
@@ -54,8 +53,7 @@ function queryForTaskPage(
   if (filter === 'assigned' && viewerId !== undefined) {
     query.append('assignees[]', String(viewerId))
   }
-  appendClickUpTaskScope(query, scope)
-  return query.toString()
+  return query
 }
 
 function matchesClientFilter(
@@ -82,10 +80,10 @@ async function getWorkspaceTaskPage(
   scope?: ClickUpTaskScope
 ): Promise<{ rawCount: number; tasks: ClickUpTask[] }> {
   const viewerId = getStatus().viewer?.id
-  const query = queryForTaskPage(page, filter, viewerId, scope)
+  const query = queryForTaskPage(page, filter, viewerId)
   const response = await clickUpRequest<{ tasks?: unknown[] }>(
     client,
-    `/team/${encodeURIComponent(client.workspace.id)}/task?${query}`
+    clickUpTaskPagePath(client.workspace.id, query, scope)
   )
   const rawTasks = response.tasks ?? []
   return {

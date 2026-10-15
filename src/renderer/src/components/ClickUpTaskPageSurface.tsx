@@ -16,11 +16,11 @@ import { ClickUpApiTokenDialog } from '@/components/clickup-api-token-dialog'
 import { ClickUpCreateTaskDialog } from '@/components/clickup-create-task-dialog'
 import { ClickUpTaskDetailSheet } from '@/components/ClickUpTaskDetailSheet'
 import { ClickUpRateLimitNotice } from '@/components/clickup-rate-limit-notice'
+import { ClickUpSprintListPicker } from '@/components/clickup-sprint-list-picker'
 import { ClickUpTaskGantt } from '@/components/clickup-task-gantt'
 import { ClickUpTaskListTable } from '@/components/clickup-task-list-table'
 import {
   ClickUpSpaceSelect,
-  ClickUpSprintMenu,
   ClickUpStatusMenu,
   ClickUpViewToggle
 } from '@/components/clickup-task-scope-filters'
@@ -269,8 +269,12 @@ export function ClickUpTaskPageSurface({
             onSpaceChange={scope.setSpaceId}
           />
         ) : null}
-        {scope.spaceId && scope.sprints.length > 0 ? (
-          <ClickUpSprintMenu
+        {scope.spaceId && scope.lists.length > 0 ? (
+          <ClickUpSprintListPicker
+            lists={scope.lists}
+            sprintFolders={scope.sprintFolders}
+            sprintFolderId={scope.sprintFolderId}
+            onSprintFolderChange={scope.setSprintFolderId}
             sprints={scope.sprints}
             current={scope.currentSprint}
             selection={scope.sprintSelection}

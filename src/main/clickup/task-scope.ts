@@ -55,6 +55,25 @@ export function appendClickUpTaskScope(query: URLSearchParams, scope?: ClickUpTa
   }
 }
 
+// Why the List endpoint for one List: /team/{id}/task?list_ids[] matches only a
+// task's home List, but Sprint Lists are mostly tasks added from backlogs (live
+// Chip1 Sprint 16: 7 of its 66 tasks). /list/{id}/task?include_timl=true returns
+// added tasks too, and takes the same page/status/assignee parameters.
+export function clickUpTaskPagePath(
+  workspaceId: string,
+  query: URLSearchParams,
+  scope?: ClickUpTaskScope
+): string {
+  const listIds = scope?.listIds ?? []
+  if (listIds.length === 1) {
+    appendClickUpTaskScope(query, scope?.statuses ? { statuses: scope.statuses } : undefined)
+    query.set('include_timl', 'true')
+    return `/list/${encodeURIComponent(listIds[0])}/task?${query}`
+  }
+  appendClickUpTaskScope(query, scope)
+  return `/team/${encodeURIComponent(workspaceId)}/task?${query}`
+}
+
 export function clickUpTaskScopeKey(scope?: ClickUpTaskScope): string {
   if (!scope) {
     return ''

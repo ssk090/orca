@@ -17,7 +17,7 @@ import {
 } from './client'
 import { getClickUpTaskInWorkspace } from './task-lookup'
 import { normalizeClickUpTask } from './task-mapping'
-import { appendClickUpTaskScope } from './task-scope'
+import { clickUpTaskPagePath } from './task-scope'
 
 // Why paging: ClickUp's v2 API has no task-name filter (GET /team/{id}/task only
 // filters by assignee, status, List, tag, dates and custom fields; text search
@@ -60,7 +60,8 @@ onClickUpDisconnect(() => {
   searchGenerations.clear()
 })
 
-function pageQuery(
+function pagePath(
+  workspaceId: string,
   scope: SearchScope,
   page: number,
   viewerId: number | undefined,
@@ -78,8 +79,7 @@ function pageQuery(
     query.set('include_closed', 'true')
     query.append('assignees[]', String(viewerId))
   }
-  appendClickUpTaskScope(query, taskScope)
-  return query.toString()
+  return clickUpTaskPagePath(workspaceId, query, taskScope)
 }
 
 function getSearchPage(
@@ -89,16 +89,13 @@ function getSearchPage(
   viewerId: number | undefined,
   taskScope?: ClickUpTaskScope
 ): Promise<TaskPage> {
-  const query = pageQuery(scope, page, viewerId, taskScope)
-  const key = `${client.token}\u0000${client.workspace.id}\u0000${query}`
+  const path = pagePath(client.workspace.id, scope, page, viewerId, taskScope)
+  const key = `${client.token}\u0000${path}`
   const cached = pageCache.get(key)
   if (cached && Date.now() - cached.loadedAt < PAGE_CACHE_TTL_MS) {
     return cached.page
   }
-  const request = clickUpRequest<{ tasks?: unknown[] }>(
-    client,
-    `/team/${encodeURIComponent(client.workspace.id)}/task?${query}`
-  ).then((response) => {
+  const request = clickUpRequest<{ tasks?: unknown[] }>(client, path).then((response) => {
     const rawTasks = response.tasks ?? []
     return {
       rawCount: rawTasks.length,

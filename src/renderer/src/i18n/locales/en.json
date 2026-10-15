@@ -18186,7 +18186,17 @@
           "clear": "Clear",
           "view": "ClickUp view",
           "list": "List",
-          "gantt": "Gantt"
+          "gantt": "Gantt",
+          "allLists": "All lists",
+          "sprintOrList": "Sprint / List",
+          "searchSprintsLists": "Search sprints and lists",
+          "sprintFolder": "Sprint folder",
+          "noFolder": "No folder",
+          "noSprintListMatch": "No sprints or lists match.",
+          "sprintsIn": "Sprints · {{folder}}",
+          "sprints": "Sprints",
+          "currentBadge": "Current",
+          "folderlessLists": "Lists without a folder"
         }
       },
       "ClickUpTaskDetailSheet": {

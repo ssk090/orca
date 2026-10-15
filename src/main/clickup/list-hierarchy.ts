@@ -82,8 +82,15 @@ function normalizeList(
     folder: normalizeClickUpLocation(record.folder) ?? fallbackFolder,
     statuses: Array.isArray(record.statuses) ? record.statuses.map(normalizeClickUpStatus) : [],
     startDate: timestampToIso(record.start_date) ?? null,
-    dueDate: timestampToIso(record.due_date) ?? null
+    dueDate: timestampToIso(record.due_date) ?? null,
+    taskCount: taskCount(record.task_count)
   }
+}
+
+// ClickUp sends task_count as a number or a numeric string depending on the endpoint.
+function taskCount(value: unknown): number | null {
+  const count = typeof value === 'string' ? Number(value) : value
+  return typeof count === 'number' && Number.isFinite(count) && count >= 0 ? count : null
 }
 
 function normalizeLists(

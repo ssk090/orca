@@ -82,6 +82,8 @@ export type ClickUpList = {
   // ISO dates; set on Sprint Lists (the Sprints ClickApp) and dated Lists.
   startDate?: string | null
   dueDate?: string | null
+  // ClickUp's own count from the hierarchy response; shown in the List picker.
+  taskCount?: number | null
 }
 
 export type ClickUpSpace = {

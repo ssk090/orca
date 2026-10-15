@@ -8,10 +8,14 @@ import type {
 } from '../../../shared/clickup-types'
 import type { TaskSourceContext } from '../../../shared/task-source-context'
 import { clickUpListLists, clickUpListSpaces } from '@/runtime/runtime-clickup-client'
+import { resolveClickUpListSelection } from './clickup-list-picker-model'
 import {
   detectClickUpSprints,
   findCurrentClickUpSprint,
-  type ClickUpSprint
+  groupClickUpSprintFolders,
+  pickDefaultClickUpSprintFolder,
+  type ClickUpSprint,
+  type ClickUpSprintFolder
 } from './clickup-sprints'
 import {
   collectClickUpStatusOptions,
@@ -30,6 +34,12 @@ export type ClickUpTaskScopeState = {
   spaces: ClickUpSpace[]
   spaceId: string | null
   setSpaceId: (spaceId: string | null) => void
+  // Every List in the selected Space, for the picker's Lists section.
+  lists: ClickUpList[]
+  sprintFolders: ClickUpSprintFolder[]
+  sprintFolderId: string | null
+  setSprintFolderId: (folderId: string) => void
+  // Sprints of the selected sprint Folder only.
   sprints: ClickUpSprint[]
   currentSprint: ClickUpSprint | null
   sprintSelection: ClickUpSprintSelection
@@ -134,7 +144,15 @@ export function useClickUpTaskScope({
   }, [scopedWorkspaceId, sourceContext, spaceId])
 
   const space = spaces.find((item) => item.id === spaceId) ?? null
-  const sprints = useMemo(() => detectClickUpSprints(lists), [lists])
+  const sprintFolders = useMemo(
+    () => groupClickUpSprintFolders(detectClickUpSprints(lists)),
+    [lists]
+  )
+  const savedFolderId = spaceId ? preferences.sprintFolderBySpace[spaceId] : undefined
+  const sprintFolder =
+    sprintFolders.find((folder) => folder.id === savedFolderId) ??
+    pickDefaultClickUpSprintFolder(sprintFolders)
+  const sprints = useMemo(() => sprintFolder?.sprints ?? [], [sprintFolder])
   const currentSprint = useMemo(() => findCurrentClickUpSprint(sprints), [sprints])
   const statusOptions = useMemo(() => collectClickUpStatusOptions(space, lists), [space, lists])
   const savedStatuses = spaceId ? preferences.statusesBySpace[spaceId] : undefined
@@ -149,20 +167,13 @@ export function useClickUpTaskScope({
     if (!spaceId) {
       return undefined
     }
-    const sprintListId =
-      sprints.length === 0
-        ? null
-        : sprintSelection === 'current'
-          ? (currentSprint?.listId ?? null)
-          : sprintSelection === 'all'
-            ? null
-            : sprintSelection.listId
+    const sprintListId = resolveClickUpListSelection(sprintSelection, lists, currentSprint)
     return {
       spaceId,
       ...(sprintListId ? { listIds: [sprintListId] } : {}),
       ...(selectedStatuses.length > 0 ? { statuses: selectedStatuses } : {})
     }
-  }, [currentSprint, selectedStatuses, spaceId, sprintSelection, sprints.length])
+  }, [currentSprint, lists, selectedStatuses, spaceId, sprintSelection])
 
   return {
     preferences,
@@ -178,6 +189,18 @@ export function useClickUpTaskScope({
           delete spaceByWorkspace[scopedWorkspaceId]
         }
         updatePreferences({ spaceByWorkspace })
+      }
+    },
+    lists,
+    sprintFolders,
+    sprintFolderId: sprintFolder?.id ?? null,
+    setSprintFolderId: (folderId) => {
+      if (spaceId) {
+        // A new Folder starts on its own current Sprint.
+        updatePreferences({
+          sprintFolderBySpace: { ...preferences.sprintFolderBySpace, [spaceId]: folderId },
+          sprintBySpace: { ...preferences.sprintBySpace, [spaceId]: 'current' }
+        })
       }
     },
     sprints,

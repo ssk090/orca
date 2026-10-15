@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   appendClickUpTaskScope,
+  clickUpTaskPagePath,
   clickUpTaskScopeKey,
   normalizeClickUpTaskScope
 } from './task-scope'
@@ -26,6 +27,30 @@ describe('ClickUp task scope', () => {
     expect(query.getAll('statuses[]')).toEqual(['to do', 'on prod env'])
     // Named statuses must reach closed tasks too.
     expect(query.get('include_closed')).toBe('true')
+  })
+
+  it('reads one List through the List endpoint so added (TIML) tasks are included', () => {
+    const path = clickUpTaskPagePath('8651091', new URLSearchParams({ page: '0' }), {
+      spaceId: '90141189689',
+      listIds: ['901421931549'],
+      statuses: ['in dev process']
+    })
+    const [pathname, search] = path.split('?')
+    const query = new URLSearchParams(search)
+    expect(pathname).toBe('/list/901421931549/task')
+    expect(query.get('include_timl')).toBe('true')
+    expect(query.getAll('statuses[]')).toEqual(['in dev process'])
+    expect(query.has('list_ids[]')).toBe(false)
+    expect(query.has('space_ids[]')).toBe(false)
+  })
+
+  it('keeps Space and multi-List scopes on the Workspace endpoint', () => {
+    expect(clickUpTaskPagePath('8651091', new URLSearchParams(), { spaceId: '901' })).toBe(
+      '/team/8651091/task?space_ids%5B%5D=901'
+    )
+    expect(clickUpTaskPagePath('8651091', new URLSearchParams(), { listIds: ['a', 'b'] })).toMatch(
+      /^\/team\/8651091\/task\?list_ids/
+    )
   })
 
   it('keys equivalent scopes the same regardless of order', () => {

@@ -46,7 +46,8 @@ function mockHierarchy(): void {
                 name: 'Backlog',
                 statuses: [{ status: 'open', type: 'open' }],
                 start_date: '1791763200000',
-                due_date: '1792886400000'
+                due_date: '1792886400000',
+                task_count: '66'
               },
               { id: 'list-3', name: 'Old', archived: true }
             ]
@@ -90,7 +91,8 @@ describe('ClickUp List hierarchy', () => {
         name: 'Backlog',
         statuses: [{ name: 'open' }],
         startDate: '2026-10-12T00:00:00.000Z',
-        dueDate: '2026-10-25T00:00:00.000Z'
+        dueDate: '2026-10-25T00:00:00.000Z',
+        taskCount: 66
       }
     ])
     // Spaces, plus one Folder and one folderless call per Space; archived Lists drop out.

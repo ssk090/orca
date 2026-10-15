@@ -57,7 +57,7 @@ describe('ClickUp sprints', () => {
       now
     )
 
-    expect(sprints.map((sprint) => sprint.listId)).toEqual(['dated', 's12', 's11'])
+    expect(sprints.map((sprint) => sprint.listId)).toEqual(['s11', 's12', 'dated'])
     expect(findCurrentClickUpSprint(sprints, now)?.listId).toBe('s12')
   })
 
@@ -116,6 +116,7 @@ describe('ClickUp task view preferences', () => {
       spaceByWorkspace: { 'team-1': 'space-1' },
       statusesBySpace: { 'space-1': ['to do'] },
       sprintBySpace: { 'space-1': { listId: 's12' } },
+      sprintFolderBySpace: {},
       view: 'gantt',
       ganttZoom: 'week',
       ganttGroupBy: 'status'

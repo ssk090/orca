@@ -339,6 +339,12 @@
           }
         }
       },
+      "clickup": {
+        "filters": {
+          "allSprints": "All sprints",
+          "sprint": "Sprint"
+        }
+      },
       "contextual": {
         "tours": {
           "ContextualTourControl": {

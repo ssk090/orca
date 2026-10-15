@@ -12,6 +12,8 @@ export type ClickUpTaskViewPreferences = {
   spaceByWorkspace: Record<string, string>
   statusesBySpace: Record<string, string[]>
   sprintBySpace: Record<string, ClickUpSprintSelection>
+  // The sprint Folder whose Sprints the picker lists; unset uses the newest active one.
+  sprintFolderBySpace: Record<string, string>
   view: ClickUpTaskViewMode
   ganttZoom: ClickUpGanttZoom
   ganttGroupBy: ClickUpGanttGroupBy
@@ -21,6 +23,7 @@ export const DEFAULT_CLICKUP_TASK_VIEW_PREFERENCES: ClickUpTaskViewPreferences =
   spaceByWorkspace: {},
   statusesBySpace: {},
   sprintBySpace: {},
+  sprintFolderBySpace: {},
   view: 'list',
   ganttZoom: 'day',
   ganttGroupBy: 'list'
@@ -77,6 +80,7 @@ export function resolveClickUpTaskViewPreferences(value: unknown): ClickUpTaskVi
     spaceByWorkspace: stringMap(value.spaceByWorkspace),
     statusesBySpace: stringListMap(value.statusesBySpace),
     sprintBySpace,
+    sprintFolderBySpace: stringMap(value.sprintFolderBySpace),
     view: value.view === 'gantt' ? 'gantt' : 'list',
     ganttZoom: value.ganttZoom === 'week' ? 'week' : 'day',
     ganttGroupBy: value.ganttGroupBy === 'status' ? 'status' : 'list'
