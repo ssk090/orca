@@ -18161,6 +18161,32 @@
         "rateLimit": {
           "limited": "ClickUp rate limit reached, retrying in {{seconds}}s",
           "paced": "Pacing ClickUp requests to stay under the rate limit, resuming in {{seconds}}s"
+        },
+        "gantt": {
+          "zoom": "Timeline zoom",
+          "day": "Day",
+          "week": "Week",
+          "groupList": "Group by List",
+          "groupStatus": "Group by status",
+          "summary": "{{scheduled}} scheduled, {{unscheduled}} unscheduled",
+          "unscheduled": "Unscheduled"
+        },
+        "filters": {
+          "space": "Space",
+          "allSpaces": "All Spaces",
+          "allSprints": "All sprints",
+          "currentSprintNamed": "Current: {{name}}",
+          "noCurrentSprint": "No current sprint",
+          "sprint": "Sprint",
+          "currentSprint": "Current sprint",
+          "anyStatus": "Any status",
+          "statusCount": "{{count}} statuses",
+          "status": "Status",
+          "selectAll": "Select all",
+          "clear": "Clear",
+          "view": "ClickUp view",
+          "list": "List",
+          "gantt": "Gantt"
         }
       },
       "ClickUpTaskDetailSheet": {

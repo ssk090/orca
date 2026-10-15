@@ -4,10 +4,12 @@ import type {
   ClickUpMutationResult,
   ClickUpTask,
   ClickUpTaskFilter,
+  ClickUpTaskScope,
   ClickUpTaskUpdate,
   ClickUpWorkspaceSelection
 } from '../../shared/clickup-types'
 import { getClickUpTask } from './task-lookup'
+import { appendClickUpTaskScope } from './task-scope'
 import {
   clickUpRequest,
   getStatus,
@@ -19,6 +21,7 @@ import { dueDateToTimestamp, normalizeClickUpTask, type JsonRecord } from './tas
 
 export {
   listClickUpLists as listLists,
+  listClickUpSpaces as listSpaces,
   listClickUpWorkspaceMembers as listWorkspaceMembers,
   listClickUpWorkspaceTags as listWorkspaceTags
 } from './workspace-directory'
@@ -31,11 +34,13 @@ export {
 
 const TASK_PAGE_SIZE = 100
 const MAX_LIST_PAGES = 10
+const MAX_SCOPED_LIST_RESULTS = 500
 
 function queryForTaskPage(
   page: number,
   filter: ClickUpTaskFilter,
-  viewerId: number | undefined
+  viewerId: number | undefined,
+  scope?: ClickUpTaskScope
 ): string {
   const query = new URLSearchParams({
     page: String(page),
@@ -49,6 +54,7 @@ function queryForTaskPage(
   if (filter === 'assigned' && viewerId !== undefined) {
     query.append('assignees[]', String(viewerId))
   }
+  appendClickUpTaskScope(query, scope)
   return query.toString()
 }
 
@@ -72,10 +78,11 @@ function matchesClientFilter(
 async function getWorkspaceTaskPage(
   client: ClickUpClientForWorkspace,
   page: number,
-  filter: ClickUpTaskFilter
+  filter: ClickUpTaskFilter,
+  scope?: ClickUpTaskScope
 ): Promise<{ rawCount: number; tasks: ClickUpTask[] }> {
   const viewerId = getStatus().viewer?.id
-  const query = queryForTaskPage(page, filter, viewerId)
+  const query = queryForTaskPage(page, filter, viewerId, scope)
   const response = await clickUpRequest<{ tasks?: unknown[] }>(
     client,
     `/team/${encodeURIComponent(client.workspace.id)}/task?${query}`
@@ -93,11 +100,12 @@ async function getWorkspaceTaskPage(
 async function listWorkspaceTasks(
   client: ClickUpClientForWorkspace,
   filter: ClickUpTaskFilter,
-  limit: number
+  limit: number,
+  scope?: ClickUpTaskScope
 ): Promise<ClickUpTask[]> {
   const matches: ClickUpTask[] = []
   for (let page = 0; page < MAX_LIST_PAGES && matches.length < limit; page += 1) {
-    const result = await getWorkspaceTaskPage(client, page, filter)
+    const result = await getWorkspaceTaskPage(client, page, filter, scope)
     matches.push(...result.tasks)
     if (result.rawCount < TASK_PAGE_SIZE) {
       break
@@ -109,12 +117,15 @@ async function listWorkspaceTasks(
 export async function listTasks(
   filter: ClickUpTaskFilter = 'assigned',
   limit = 50,
-  workspaceId?: ClickUpWorkspaceSelection | null
+  workspaceId?: ClickUpWorkspaceSelection | null,
+  scope?: ClickUpTaskScope
 ): Promise<ClickUpTask[]> {
-  const safeLimit = Math.min(Math.max(1, limit), TASK_PAGE_SIZE)
+  // Why a higher cap when scoped: browsing one Space or Sprint should show all
+  // of it, while the unscoped Workspace feed stays one page.
+  const safeLimit = Math.min(Math.max(1, limit), scope ? MAX_SCOPED_LIST_RESULTS : TASK_PAGE_SIZE)
   const results = await Promise.all(
     requireClickUpClients(workspaceId).map((client) =>
-      listWorkspaceTasks(client, filter, safeLimit)
+      listWorkspaceTasks(client, filter, safeLimit, scope)
     )
   )
   return results

@@ -70,8 +70,8 @@ describe('ClickUp RPC methods', () => {
     await dispatcher.dispatch(makeRequest('clickup.listLists', { workspaceId: 'team-1' }))
 
     expect(runtime.clickUpConnect).toHaveBeenCalledWith('pk_token')
-    expect(runtime.clickUpSearchTasks).toHaveBeenCalledWith('auth', 10, 'all')
-    expect(runtime.clickUpListTasks).toHaveBeenCalledWith('assigned', 20, 'team-1')
+    expect(runtime.clickUpSearchTasks).toHaveBeenCalledWith('auth', 10, 'all', undefined)
+    expect(runtime.clickUpListTasks).toHaveBeenCalledWith('assigned', 20, 'team-1', undefined)
     expect(runtime.clickUpGetTask).toHaveBeenCalledWith('abc', 'team-1')
     expect(runtime.clickUpCreateTask).toHaveBeenCalledWith({
       workspaceId: 'team-1',
@@ -85,7 +85,7 @@ describe('ClickUp RPC methods', () => {
     )
     expect(runtime.clickUpAddTaskComment).toHaveBeenCalledWith('abc', 'Ready', 'team-1')
     expect(runtime.clickUpTaskComments).toHaveBeenCalledWith('abc', 'team-1')
-    expect(runtime.clickUpListLists).toHaveBeenCalledWith('team-1', undefined)
+    expect(runtime.clickUpListLists).toHaveBeenCalledWith('team-1', undefined, undefined)
   })
 
   it('rejects malformed priorities and due dates before runtime dispatch', async () => {

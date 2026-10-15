@@ -1,6 +1,7 @@
 import type {
   ClickUpCreateTaskArgs,
   ClickUpTaskFilter,
+  ClickUpTaskScope,
   ClickUpTaskUpdate,
   ClickUpWorkspaceSelection
 } from '../../shared/clickup-types'
@@ -11,15 +12,17 @@ import {
   getTask,
   getTaskComments,
   listLists,
+  listSpaces,
   listTasks,
   listWorkspaceMembers,
   listWorkspaceTags,
   searchTasks,
   updateTask
 } from '../clickup/tasks'
+import { normalizeClickUpTaskScope } from '../clickup/task-scope'
 
-function clampLimit(limit: number): number {
-  return Math.min(Math.max(1, limit), 100)
+function clampLimit(limit: number, max = 100): number {
+  return Math.min(Math.max(1, limit), max)
 }
 
 // Why: mirrors RuntimeJiraCommands so the edge controller can bind every
@@ -49,17 +52,20 @@ export class RuntimeClickUpCommands {
   clickUpSearchTasks(
     query: string,
     limit = 20,
-    workspaceId?: ClickUpWorkspaceSelection
+    workspaceId?: ClickUpWorkspaceSelection,
+    scope?: ClickUpTaskScope
   ): ReturnType<typeof searchTasks> {
-    return searchTasks(query, clampLimit(limit), workspaceId)
+    return searchTasks(query, clampLimit(limit), workspaceId, normalizeClickUpTaskScope(scope))
   }
 
   clickUpListTasks(
     filter?: ClickUpTaskFilter,
     limit = 50,
-    workspaceId?: ClickUpWorkspaceSelection
+    workspaceId?: ClickUpWorkspaceSelection,
+    scope?: ClickUpTaskScope
   ): ReturnType<typeof listTasks> {
-    return listTasks(filter, clampLimit(limit), workspaceId)
+    const taskScope = normalizeClickUpTaskScope(scope)
+    return listTasks(filter, clampLimit(limit, taskScope ? 500 : 100), workspaceId, taskScope)
   }
 
   clickUpGetTask(taskId: string, workspaceId?: string): ReturnType<typeof getTask> {
@@ -92,9 +98,14 @@ export class RuntimeClickUpCommands {
 
   clickUpListLists(
     workspaceId?: ClickUpWorkspaceSelection,
-    listId?: string
+    listId?: string,
+    spaceId?: string
   ): ReturnType<typeof listLists> {
-    return listLists(workspaceId, listId)
+    return listLists(workspaceId, listId, spaceId)
+  }
+
+  clickUpListSpaces(workspaceId?: ClickUpWorkspaceSelection): ReturnType<typeof listSpaces> {
+    return listSpaces(workspaceId)
   }
 
   clickUpListMembers(workspaceId?: string): ReturnType<typeof listWorkspaceMembers> {

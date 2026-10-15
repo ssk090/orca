@@ -7,6 +7,7 @@ import {
   getTask,
   getTaskComments,
   listLists,
+  listSpaces,
   listTasks,
   listWorkspaceMembers,
   listWorkspaceTags,
@@ -15,10 +16,12 @@ import {
 } from '../clickup/tasks'
 import { _resetPreflightCache } from './preflight'
 import { asRecord } from '../clickup/json-record'
+import { normalizeClickUpTaskScope } from '../clickup/task-scope'
 import { isClickUpTaskFilter } from '../../shared/clickup-task-filter'
 import type {
   ClickUpCreateTaskArgs,
   ClickUpTaskFilter,
+  ClickUpTaskScope,
   ClickUpTaskUpdate,
   ClickUpWorkspaceSelection
 } from '../../shared/clickup-types'
@@ -31,10 +34,10 @@ function workspaceSelection(value: unknown): ClickUpWorkspaceSelection | undefin
   return optionalString(value)
 }
 
-function clampLimit(value: unknown, fallback: number): number {
+function clampLimit(value: unknown, fallback: number, max = 100): number {
   return Math.min(
     Math.max(1, typeof value === 'number' && Number.isFinite(value) ? value : fallback),
-    100
+    max
   )
 }
 
@@ -148,7 +151,12 @@ export function registerClickUpHandlers(): void {
     'clickup:searchTasks',
     async (
       _event,
-      args: { query: string; limit?: number; workspaceId?: ClickUpWorkspaceSelection }
+      args: {
+        query: string
+        limit?: number
+        workspaceId?: ClickUpWorkspaceSelection
+        scope?: ClickUpTaskScope
+      }
     ) => {
       if (typeof args?.query !== 'string') {
         return []
@@ -156,7 +164,8 @@ export function registerClickUpHandlers(): void {
       return searchTasks(
         args.query,
         clampLimit(args.limit, 20),
-        workspaceSelection(args.workspaceId)
+        workspaceSelection(args.workspaceId),
+        normalizeClickUpTaskScope(args.scope)
       )
     }
   )
@@ -169,10 +178,16 @@ export function registerClickUpHandlers(): void {
         filter?: ClickUpTaskFilter
         limit?: number
         workspaceId?: ClickUpWorkspaceSelection
+        scope?: ClickUpTaskScope
       }
     ) => {
       const filter = isClickUpTaskFilter(args?.filter) ? args?.filter : undefined
-      return listTasks(filter, clampLimit(args?.limit, 50), workspaceSelection(args?.workspaceId))
+      return listTasks(
+        filter,
+        clampLimit(args?.limit, 50, 500),
+        workspaceSelection(args?.workspaceId),
+        normalizeClickUpTaskScope(args?.scope)
+      )
     }
   )
 
@@ -263,8 +278,19 @@ export function registerClickUpHandlers(): void {
 
   ipcMain.handle(
     'clickup:listLists',
-    async (_event, args?: { workspaceId?: ClickUpWorkspaceSelection; listId?: string }) =>
-      listLists(workspaceSelection(args?.workspaceId), optionalString(args?.listId))
+    async (
+      _event,
+      args?: { workspaceId?: ClickUpWorkspaceSelection; listId?: string; spaceId?: string }
+    ) =>
+      listLists(
+        workspaceSelection(args?.workspaceId),
+        optionalString(args?.listId),
+        optionalString(args?.spaceId)
+      )
+  )
+
+  ipcMain.handle('clickup:listSpaces', async (_event, args?: { workspaceId?: string }) =>
+    listSpaces(workspaceSelection(args?.workspaceId))
   )
 
   ipcMain.handle('clickup:listMembers', async (_event, args?: { workspaceId?: string }) =>

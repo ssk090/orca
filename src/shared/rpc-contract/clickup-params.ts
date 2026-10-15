@@ -20,24 +20,36 @@ export const ClickUpWorkspaceSelection = z
   .optional()
 
 // listId narrows the read to one List, for callers that only need its statuses.
+// spaceId walks only that Space.
 export const ClickUpListLists = z
   .object({
     workspaceId: OptionalString,
-    listId: OptionalString
+    listId: OptionalString,
+    spaceId: OptionalString
+  })
+  .optional()
+
+const ClickUpTaskScopeParams = z
+  .object({
+    spaceId: OptionalString,
+    listIds: z.array(z.string()).max(50).optional(),
+    statuses: z.array(z.string()).max(50).optional()
   })
   .optional()
 
 export const ClickUpSearchTasks = z.object({
   query: requiredString('Search query is required'),
   limit: OptionalFiniteNumber,
-  workspaceId: OptionalString
+  workspaceId: OptionalString,
+  scope: ClickUpTaskScopeParams
 })
 
 export const ClickUpListTasks = z
   .object({
     filter: z.enum(['assigned', 'created', 'all', 'completed', 'open']).optional(),
     limit: OptionalFiniteNumber,
-    workspaceId: OptionalString
+    workspaceId: OptionalString,
+    scope: ClickUpTaskScopeParams
   })
   .optional()
 

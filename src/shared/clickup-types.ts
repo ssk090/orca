@@ -79,6 +79,25 @@ export type ClickUpList = {
     name: string
   }
   statuses: ClickUpStatus[]
+  // ISO dates; set on Sprint Lists (the Sprints ClickApp) and dated Lists.
+  startDate?: string | null
+  dueDate?: string | null
+}
+
+export type ClickUpSpace = {
+  id: string
+  name: string
+  workspaceId: string
+  // The Space's default workflow; Lists may override it.
+  statuses: ClickUpStatus[]
+}
+
+// Server-side narrowing for task listing and search (space_ids[], list_ids[],
+// statuses[] on GET /team/{id}/task).
+export type ClickUpTaskScope = {
+  spaceId?: string
+  listIds?: string[]
+  statuses?: string[]
 }
 
 export type ClickUpTask = {

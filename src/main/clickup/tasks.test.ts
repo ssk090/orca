@@ -185,4 +185,21 @@ describe('ClickUp task operations', () => {
     expect(path).toContain('custom_task_ids=true')
     expect(path).toContain('team_id=team-1')
   })
+
+  it('lists a whole Space past one page when scoped', async () => {
+    clickUpRequestMock
+      .mockResolvedValueOnce({
+        tasks: Array.from({ length: 100 }, (_, index) => rawTask(`a${index}`))
+      })
+      .mockResolvedValueOnce({ tasks: [rawTask('last')] })
+    const { listTasks } = await import('./tasks')
+
+    const tasks = await listTasks('all', 500, 'team-1', { spaceId: '901', statuses: ['to do'] })
+
+    expect(tasks).toHaveLength(101)
+    const path = String(clickUpRequestMock.mock.calls[0][1])
+    expect(path).toContain('space_ids%5B%5D=901')
+    expect(path).toContain('statuses%5B%5D=to+do')
+    expect(String(clickUpRequestMock.mock.calls[1][1])).toContain('page=1')
+  })
 })

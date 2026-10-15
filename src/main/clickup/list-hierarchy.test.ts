@@ -20,7 +20,19 @@ function client(id = 'team-1'): ClickUpClientForWorkspace {
 function mockHierarchy(): void {
   clickUpRequestMock.mockImplementation(async (_client: unknown, path: string) => {
     if (path.startsWith('/team/')) {
-      return { spaces: [{ id: 'space-1', name: 'Engineering' }] }
+      return {
+        spaces: [
+          {
+            id: 'space-1',
+            name: 'Engineering',
+            statuses: [
+              { status: 'to do', type: 'open', orderindex: 0 },
+              { status: 'complete', type: 'closed', orderindex: 1 }
+            ]
+          },
+          { id: 'space-2', name: 'Chip1' }
+        ]
+      }
     }
     if (path.startsWith('/space/space-1/folder')) {
       return {
@@ -29,7 +41,13 @@ function mockHierarchy(): void {
             id: 'folder-1',
             name: 'Product',
             lists: [
-              { id: 'list-2', name: 'Backlog', statuses: [{ status: 'open', type: 'open' }] },
+              {
+                id: 'list-2',
+                name: 'Backlog',
+                statuses: [{ status: 'open', type: 'open' }],
+                start_date: '1791763200000',
+                due_date: '1792886400000'
+              },
               { id: 'list-3', name: 'Old', archived: true }
             ]
           },
@@ -39,6 +57,9 @@ function mockHierarchy(): void {
     }
     if (path.startsWith('/space/space-1/list')) {
       return { lists: [{ id: 'list-1', name: 'Inbox' }] }
+    }
+    if (path.startsWith('/space/space-2/')) {
+      return path.includes('/folder') ? { folders: [] } : { lists: [{ id: 'chip', name: 'Chip' }] }
     }
     if (path.startsWith('/list/list-9')) {
       return { id: 'list-9', name: 'Solo', space: { id: 'space-1', name: 'Engineering' } }
@@ -51,42 +72,45 @@ describe('ClickUp List hierarchy', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     getClientsMock.mockReturnValue([client()])
-    const { clearClickUpListCache } = await import('./workspace-directory')
+    const { clearClickUpListCache } = await import('./list-hierarchy')
     clearClickUpListCache()
     mockHierarchy()
   })
 
   it('reads Folder Lists inline instead of one request per Folder', async () => {
-    const { listClickUpLists } = await import('./workspace-directory')
+    const { listClickUpLists } = await import('./list-hierarchy')
 
     await expect(listClickUpLists('team-1')).resolves.toMatchObject([
+      { id: 'chip', space: { name: 'Chip1' } },
       { id: 'list-1', space: { name: 'Engineering' }, name: 'Inbox' },
       {
         id: 'list-2',
         space: { name: 'Engineering' },
         folder: { name: 'Product' },
         name: 'Backlog',
-        statuses: [{ name: 'open' }]
+        statuses: [{ name: 'open' }],
+        startDate: '2026-10-12T00:00:00.000Z',
+        dueDate: '2026-10-25T00:00:00.000Z'
       }
     ])
     // Spaces, plus one Folder and one folderless call per Space; archived Lists drop out.
-    expect(clickUpRequestMock).toHaveBeenCalledTimes(3)
+    expect(clickUpRequestMock).toHaveBeenCalledTimes(5)
     expect(clickUpRequestMock.mock.calls.map((call) => call[1])).not.toContain(
       expect.stringContaining('/folder/')
     )
   })
 
   it('serves repeat and concurrent loads from one cached walk', async () => {
-    const { listClickUpLists } = await import('./workspace-directory')
+    const { listClickUpLists } = await import('./list-hierarchy')
 
     await Promise.all([listClickUpLists('team-1'), listClickUpLists('team-1')])
     await listClickUpLists('team-1')
 
-    expect(clickUpRequestMock).toHaveBeenCalledTimes(3)
+    expect(clickUpRequestMock).toHaveBeenCalledTimes(5)
   })
 
   it('reads a single List with one request when listId is given', async () => {
-    const { listClickUpLists } = await import('./workspace-directory')
+    const { listClickUpLists } = await import('./list-hierarchy')
 
     await expect(listClickUpLists('team-1', 'list-9')).resolves.toMatchObject([
       { id: 'list-9', name: 'Solo' }
@@ -96,10 +120,30 @@ describe('ClickUp List hierarchy', () => {
 
   it('refetches after a failed walk instead of caching the failure', async () => {
     clickUpRequestMock.mockRejectedValueOnce(new Error('Rate limit reached'))
-    const { listClickUpLists } = await import('./workspace-directory')
+    const { listClickUpLists } = await import('./list-hierarchy')
 
     await expect(listClickUpLists('team-1')).rejects.toThrow('Rate limit reached')
     mockHierarchy()
-    await expect(listClickUpLists('team-1')).resolves.toHaveLength(2)
+    await expect(listClickUpLists('team-1')).resolves.toHaveLength(3)
+  })
+
+  it('walks only the selected Space and lists Spaces with their statuses', async () => {
+    const { listClickUpLists, listClickUpSpaces } = await import('./list-hierarchy')
+
+    await expect(listClickUpSpaces('team-1')).resolves.toMatchObject([
+      { id: 'space-2', name: 'Chip1', statuses: [] },
+      {
+        id: 'space-1',
+        statuses: [
+          { name: 'to do', type: 'open' },
+          { name: 'complete', type: 'closed' }
+        ]
+      }
+    ])
+    await expect(listClickUpLists('team-1', null, 'space-2')).resolves.toMatchObject([
+      { id: 'chip' }
+    ])
+    // One Spaces read (shared), then two reads for the selected Space only.
+    expect(clickUpRequestMock).toHaveBeenCalledTimes(3)
   })
 })

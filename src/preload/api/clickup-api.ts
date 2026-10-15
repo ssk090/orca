@@ -7,9 +7,11 @@ import type {
   ClickUpList,
   ClickUpMutationResult,
   ClickUpRateLimitState,
+  ClickUpSpace,
   ClickUpTag,
   ClickUpTask,
   ClickUpTaskFilter,
+  ClickUpTaskScope,
   ClickUpTaskUpdate,
   ClickUpUser,
   ClickUpViewer,
@@ -30,11 +32,13 @@ export type ClickUpApi = {
     query: string
     limit?: number
     workspaceId?: ClickUpWorkspaceSelection
+    scope?: ClickUpTaskScope
   }) => Promise<ClickUpTask[]>
   listTasks: (args?: {
     filter?: ClickUpTaskFilter
     limit?: number
     workspaceId?: ClickUpWorkspaceSelection
+    scope?: ClickUpTaskScope
   }) => Promise<ClickUpTask[]>
   getTask: (args: { taskId: string; workspaceId?: string }) => Promise<ClickUpTask | null>
   createTask: (args: ClickUpCreateTaskArgs) => Promise<ClickUpCreateTaskResult>
@@ -52,7 +56,9 @@ export type ClickUpApi = {
   listLists: (args?: {
     workspaceId?: ClickUpWorkspaceSelection
     listId?: string
+    spaceId?: string
   }) => Promise<ClickUpList[]>
+  listSpaces: (args?: { workspaceId?: ClickUpWorkspaceSelection }) => Promise<ClickUpSpace[]>
   listMembers: (args?: { workspaceId?: string }) => Promise<ClickUpUser[]>
   listTags: (args?: { workspaceId?: string }) => Promise<ClickUpTag[]>
   rateLimitState: () => Promise<ClickUpRateLimitState>

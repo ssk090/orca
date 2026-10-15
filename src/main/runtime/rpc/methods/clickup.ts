@@ -49,14 +49,14 @@ export const CLICKUP_METHODS = [
     permission: 'workspace',
     params: ClickUpSearchTasks,
     handler: async (params, { runtime }) =>
-      runtime.clickUpSearchTasks(params.query, params.limit, params.workspaceId)
+      runtime.clickUpSearchTasks(params.query, params.limit, params.workspaceId, params.scope)
   }),
   defineMethod({
     name: 'clickup.listTasks',
     permission: 'workspace',
     params: ClickUpListTasks,
     handler: async (params, { runtime }) =>
-      runtime.clickUpListTasks(params?.filter, params?.limit, params?.workspaceId)
+      runtime.clickUpListTasks(params?.filter, params?.limit, params?.workspaceId, params?.scope)
   }),
   defineMethod({
     name: 'clickup.getTask',
@@ -97,7 +97,13 @@ export const CLICKUP_METHODS = [
     permission: 'workspace',
     params: ClickUpListLists,
     handler: async (params, { runtime }) =>
-      runtime.clickUpListLists(params?.workspaceId, params?.listId)
+      runtime.clickUpListLists(params?.workspaceId, params?.listId, params?.spaceId)
+  }),
+  defineMethod({
+    name: 'clickup.listSpaces',
+    permission: 'workspace',
+    params: ClickUpWorkspaceSelection,
+    handler: async (params, { runtime }) => runtime.clickUpListSpaces(params?.workspaceId)
   }),
   defineMethod({
     name: 'clickup.listMembers',

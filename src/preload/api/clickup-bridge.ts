@@ -29,6 +29,8 @@ export const clickUpApi = {
 
   listLists: (args) => ipcRenderer.invoke('clickup:listLists', args),
 
+  listSpaces: (args) => ipcRenderer.invoke('clickup:listSpaces', args),
+
   listMembers: (args) => ipcRenderer.invoke('clickup:listMembers', args),
 
   listTags: (args) => ipcRenderer.invoke('clickup:listTags', args),

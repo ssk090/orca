@@ -6,9 +6,11 @@ import type {
   ClickUpCreateTaskResult,
   ClickUpList,
   ClickUpMutationResult,
+  ClickUpSpace,
   ClickUpTag,
   ClickUpTask,
   ClickUpTaskFilter,
+  ClickUpTaskScope,
   ClickUpTaskUpdate,
   ClickUpUser,
   ClickUpViewer,
@@ -102,13 +104,19 @@ export async function clickUpSearchTasks(
   settings: RuntimeClickUpSettings,
   query: string,
   limit?: number,
-  workspaceId?: ClickUpWorkspaceSelection | null
+  workspaceId?: ClickUpWorkspaceSelection | null,
+  scope?: ClickUpTaskScope
 ): Promise<ClickUpTask[]> {
   if (!isRuntimeProviderSearchQueryWithinLimit(query)) {
     return []
   }
   const target = targetFor(settings)
-  const params = { query, limit, workspaceId: workspaceId ?? undefined }
+  const params = {
+    query,
+    limit,
+    workspaceId: workspaceId ?? undefined,
+    ...(scope ? { scope } : {})
+  }
   return target.kind === 'environment'
     ? callRuntimeRpc(target, 'clickup.searchTasks', params, { timeoutMs: 60_000 })
     : withLocalTimeout(window.api.clickup.searchTasks(params), 60_000)
@@ -118,10 +126,16 @@ export async function clickUpListTasks(
   settings: RuntimeClickUpSettings,
   filter?: ClickUpTaskFilter,
   limit?: number,
-  workspaceId?: ClickUpWorkspaceSelection | null
+  workspaceId?: ClickUpWorkspaceSelection | null,
+  scope?: ClickUpTaskScope
 ): Promise<ClickUpTask[]> {
   const target = targetFor(settings)
-  const params = { filter, limit, workspaceId: workspaceId ?? undefined }
+  const params = {
+    filter,
+    limit,
+    workspaceId: workspaceId ?? undefined,
+    ...(scope ? { scope } : {})
+  }
   return target.kind === 'environment'
     ? callRuntimeRpc(target, 'clickup.listTasks', params, { timeoutMs: 60_000 })
     : withLocalTimeout(window.api.clickup.listTasks(params), 60_000)
@@ -190,16 +204,32 @@ export async function clickUpTaskComments(
 export async function clickUpListLists(
   settings: RuntimeClickUpSettings,
   workspaceId?: ClickUpWorkspaceSelection | null,
-  listId?: string | null
+  listId?: string | null,
+  spaceId?: string | null
 ): Promise<ClickUpList[]> {
   const target = targetFor(settings)
   const params =
-    workspaceId || listId
-      ? { ...(workspaceId ? { workspaceId } : {}), ...(listId ? { listId } : {}) }
+    workspaceId || listId || spaceId
+      ? {
+          ...(workspaceId ? { workspaceId } : {}),
+          ...(listId ? { listId } : {}),
+          ...(spaceId ? { spaceId } : {})
+        }
       : undefined
   return target.kind === 'environment'
     ? callRuntimeRpc(target, 'clickup.listLists', params, { timeoutMs: 60_000 })
     : withLocalTimeout(window.api.clickup.listLists(params), 60_000)
+}
+
+export async function clickUpListSpaces(
+  settings: RuntimeClickUpSettings,
+  workspaceId?: ClickUpWorkspaceSelection | null
+): Promise<ClickUpSpace[]> {
+  const target = targetFor(settings)
+  const params = workspaceId ? { workspaceId } : undefined
+  return target.kind === 'environment'
+    ? callRuntimeRpc(target, 'clickup.listSpaces', params, { timeoutMs: 60_000 })
+    : withLocalTimeout(window.api.clickup.listSpaces(params), 60_000)
 }
 
 export async function clickUpListMembers(

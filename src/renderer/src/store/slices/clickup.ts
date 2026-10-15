@@ -19,58 +19,19 @@ import {
   clickUpTestConnection
 } from '@/runtime/runtime-clickup-client'
 import { getProviderRuntimeContextKey } from '@/lib/provider-runtime-context'
-import {
-  getTaskSourceCacheScope,
-  getTaskSourceRuntimeSettings,
-  type TaskSourceContext
-} from '../../../../shared/task-source-context'
+import type { TaskSourceContext } from '../../../../shared/task-source-context'
 import { patchClickUpCaches } from './clickup-task-cache-patch'
 import {
-  clickUpCacheKey,
+  getReadScope,
+  scopedKey,
+  selectedWorkspaceId,
+  taskScopeKey,
+  type ClickUpReadOptions
+} from './clickup-read-scope'
+import {
   evictStaleClickUpCacheEntries,
   isFreshClickUpCacheEntry
 } from './clickup-task-cache-policy'
-
-type ClickUpReadOptions = {
-  force?: boolean
-  sourceContext?: TaskSourceContext | null
-}
-
-type ClickUpReadScope = {
-  settings: AppState['settings'] | TaskSourceContext | null
-  contextKey: string
-  cachePrefix: string | null
-  explicitSource: boolean
-}
-
-function getReadScope(
-  settings: AppState['settings'],
-  sourceContext?: TaskSourceContext | null
-): ClickUpReadScope {
-  if (!sourceContext) {
-    return {
-      settings,
-      contextKey: getProviderRuntimeContextKey(settings),
-      cachePrefix: null,
-      explicitSource: false
-    }
-  }
-  const runtimeSettings = getTaskSourceRuntimeSettings(sourceContext)
-  return {
-    settings: sourceContext,
-    contextKey: `${getProviderRuntimeContextKey(runtimeSettings)}::${getTaskSourceCacheScope(sourceContext)}`,
-    cachePrefix: getTaskSourceCacheScope(sourceContext),
-    explicitSource: true
-  }
-}
-
-function scopedKey(scope: ClickUpReadScope, key: string): string {
-  return clickUpCacheKey(scope.cachePrefix, key)
-}
-
-function selectedWorkspaceId(status: ClickUpConnectionStatus): ClickUpWorkspaceSelection | null {
-  return status.selectedWorkspaceId ?? status.activeWorkspaceId ?? null
-}
 
 let mutationGeneration = 0
 const statusInflight = new Map<string, Promise<void>>()
@@ -259,13 +220,22 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
   searchClickUpTasks: async (query, limit = 20, options) => {
     const scope = getReadScope(get().settings, options?.sourceContext)
     const workspaceId = selectedWorkspaceId(get().clickUpStatus)
-    const key = scopedKey(scope, `${workspaceId ?? 'default'}::search::${query}::${limit}`)
+    const key = scopedKey(
+      scope,
+      `${workspaceId ?? 'default'}::search::${query}::${limit}::${taskScopeKey(options?.taskScope)}`
+    )
     const cached = get().clickUpSearchCache[key]
     if (!options?.force && isFreshClickUpCacheEntry(cached)) {
       return cached.data ?? []
     }
     const generation = mutationGeneration
-    const tasks = await clickUpSearchTasks(scope.settings, query, limit, workspaceId)
+    const tasks = await clickUpSearchTasks(
+      scope.settings,
+      query,
+      limit,
+      workspaceId,
+      options?.taskScope
+    )
     if (generation !== mutationGeneration) {
       return tasks
     }
@@ -291,13 +261,22 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
   listClickUpTasks: async (filter = 'assigned', limit = 50, options) => {
     const scope = getReadScope(get().settings, options?.sourceContext)
     const workspaceId = selectedWorkspaceId(get().clickUpStatus)
-    const key = scopedKey(scope, `${workspaceId ?? 'default'}::list::${filter}::${limit}`)
+    const key = scopedKey(
+      scope,
+      `${workspaceId ?? 'default'}::list::${filter}::${limit}::${taskScopeKey(options?.taskScope)}`
+    )
     const cached = get().clickUpListCache[key]
     if (!options?.force && isFreshClickUpCacheEntry(cached)) {
       return cached.data ?? []
     }
     const generation = mutationGeneration
-    const tasks = await clickUpListTasks(scope.settings, filter, limit, workspaceId)
+    const tasks = await clickUpListTasks(
+      scope.settings,
+      filter,
+      limit,
+      workspaceId,
+      options?.taskScope
+    )
     if (generation !== mutationGeneration) {
       return tasks
     }

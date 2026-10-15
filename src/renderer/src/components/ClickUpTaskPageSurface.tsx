@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, ExternalLink, Loader2, Plus, RefreshCw, Search, X } from 'lucide-react'
+import { Loader2, Plus, RefreshCw, Search, X } from 'lucide-react'
 import type {
   ClickUpTask,
   ClickUpTaskFilter,
@@ -16,6 +16,15 @@ import { ClickUpApiTokenDialog } from '@/components/clickup-api-token-dialog'
 import { ClickUpCreateTaskDialog } from '@/components/clickup-create-task-dialog'
 import { ClickUpTaskDetailSheet } from '@/components/ClickUpTaskDetailSheet'
 import { ClickUpRateLimitNotice } from '@/components/clickup-rate-limit-notice'
+import { ClickUpTaskGantt } from '@/components/clickup-task-gantt'
+import { ClickUpTaskListTable } from '@/components/clickup-task-list-table'
+import {
+  ClickUpSpaceSelect,
+  ClickUpSprintMenu,
+  ClickUpStatusMenu,
+  ClickUpViewToggle
+} from '@/components/clickup-task-scope-filters'
+import { useClickUpTaskScope } from '@/components/use-clickup-task-scope'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -29,10 +38,9 @@ import { translate } from '@/i18n/i18n'
 import {
   getClickUpFilters,
   linkedClickUpTaskContext,
-  clickUpTaskReference
+  clickUpTaskReference,
+  matchesClickUpTaskFilter
 } from './clickup-task-page-model'
-
-const TASK_GRID_COLUMNS = 'grid-cols-[110px_minmax(0,2fr)_140px_140px_110px_64px]'
 
 export function ClickUpTaskPageSurface({
   sourceContext,
@@ -64,6 +72,12 @@ export function ClickUpTaskPageSurface({
   const workspaces = status.workspaces ?? []
   const selectedWorkspaceId =
     status.selectedWorkspaceId ?? status.activeWorkspaceId ?? workspaces[0]?.id ?? null
+  const scope = useClickUpTaskScope({
+    sourceContext,
+    workspaceId: selectedWorkspaceId,
+    enabled: status.connected === true
+  })
+  const taskScope = scope.taskScope
 
   useEffect(() => {
     if (!statusChecked) {
@@ -76,14 +90,19 @@ export function ClickUpTaskPageSurface({
       setTasks([])
       return
     }
+    if (!scope.ready) {
+      return
+    }
     let cancelled = false
     setLoading(true)
     setError(null)
     const shouldForce = refreshNonce !== forcedForNonceRef.current
     forcedForNonceRef.current = refreshNonce
+    const readOptions = { force: shouldForce, sourceContext, taskScope }
+    // Why 500 when scoped: browsing a Space or Sprint should show all of it.
     const request = appliedQuery.trim()
-      ? searchTasks(appliedQuery, 50, { force: shouldForce, sourceContext })
-      : listTasks(filter, 100, { force: shouldForce, sourceContext })
+      ? searchTasks(appliedQuery, 50, readOptions)
+      : listTasks(filter, taskScope ? 500 : 100, readOptions)
     void request
       .then((nextTasks) => {
         if (!cancelled) {
@@ -103,14 +122,28 @@ export function ClickUpTaskPageSurface({
     return () => {
       cancelled = true
     }
-  }, [appliedQuery, filter, listTasks, refreshNonce, searchTasks, sourceContext, status.connected])
+  }, [
+    appliedQuery,
+    filter,
+    listTasks,
+    refreshNonce,
+    scope.ready,
+    searchTasks,
+    sourceContext,
+    status.connected,
+    taskScope
+  ])
 
   // Why: search results arrive ranked (exact id, then name prefix, then
-  // substring); re-sorting by update time would bury the exact match.
-  const sortedTasks = useMemo(
+  // substring); re-sorting by update time would bury the exact match. Search
+  // ignores the assignee/state filter server-side, so apply it here.
+  const viewerId = status.viewer?.id
+  const visibleTasks = useMemo(
     () =>
-      appliedQuery ? tasks : [...tasks].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
-    [appliedQuery, tasks]
+      appliedQuery
+        ? tasks.filter((task) => matchesClickUpTaskFilter(task, filter, viewerId))
+        : [...tasks].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    [appliedQuery, filter, tasks, viewerId]
   )
 
   const handleWorkspaceChange = useCallback(
@@ -229,6 +262,28 @@ export function ClickUpTaskPageSurface({
             ))}
           </SelectContent>
         </Select>
+        {scope.spaces.length > 0 ? (
+          <ClickUpSpaceSelect
+            spaces={scope.spaces}
+            spaceId={scope.spaceId}
+            onSpaceChange={scope.setSpaceId}
+          />
+        ) : null}
+        {scope.spaceId && scope.sprints.length > 0 ? (
+          <ClickUpSprintMenu
+            sprints={scope.sprints}
+            current={scope.currentSprint}
+            selection={scope.sprintSelection}
+            onSelectionChange={scope.setSprintSelection}
+          />
+        ) : null}
+        {scope.spaceId && scope.statusOptions.length > 0 ? (
+          <ClickUpStatusMenu
+            options={scope.statusOptions}
+            selected={scope.selectedStatuses}
+            onSelectedChange={scope.setSelectedStatuses}
+          />
+        ) : null}
         <form
           className="flex min-w-[220px] flex-1 items-center gap-2"
           onSubmit={(event) => {
@@ -260,6 +315,10 @@ export function ClickUpTaskPageSurface({
             </button>
           ) : null}
         </form>
+        <ClickUpViewToggle
+          view={scope.preferences.view}
+          onViewChange={(view) => scope.updatePreferences({ view })}
+        />
         <Button variant="outline" size="icon-sm" onClick={() => setCreateOpen(true)}>
           <Plus />
           <span className="sr-only">
@@ -279,101 +338,30 @@ export function ClickUpTaskPageSurface({
         </Button>
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md rounded-t-none border border-t-0 border-border bg-background shadow-sm">
-        <div
-          className={`grid ${TASK_GRID_COLUMNS} gap-3 border-b border-border bg-muted/35 px-3 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground`}
-        >
-          <span>{translate('auto.components.clickup.page.id', 'ID')}</span>
-          <span>{translate('auto.components.clickup.page.name', 'Name')}</span>
-          <span>{translate('auto.components.clickup.page.status', 'Status')}</span>
-          <span>{translate('auto.components.clickup.page.list', 'List')}</span>
-          <span>{translate('auto.components.clickup.page.updated', 'Updated')}</span>
-          <span />
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto scrollbar-sleek">
-          <ClickUpRateLimitNotice />
-          {error ? (
-            <div className="border-b border-border px-4 py-4 text-sm text-destructive">{error}</div>
-          ) : null}
-          {loading && tasks.length === 0 ? (
-            <div className="divide-y divide-border">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className={`grid ${TASK_GRID_COLUMNS} gap-3 px-3 py-3`}>
-                  {Array.from({ length: 5 }).map((__, cell) => (
-                    <div key={cell} className="h-3 animate-pulse rounded bg-muted" />
-                  ))}
-                </div>
-              ))}
-            </div>
-          ) : null}
-          {!loading && sortedTasks.length === 0 && !error ? (
-            <div className="px-4 py-12 text-center">
-              <p className="text-sm font-medium text-foreground">
-                {translate('auto.components.clickup.page.emptyTitle', 'No ClickUp tasks found')}
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {translate(
-                  'auto.components.clickup.page.emptyDescription',
-                  'Try another filter or search term.'
-                )}
-              </p>
-            </div>
-          ) : null}
-          <div className="divide-y divide-border">
-            {sortedTasks.map((task) => (
-              <div
-                key={`${task.workspaceId}:${task.id}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => setSelectedTask(task)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault()
-                    setSelectedTask(task)
-                  }
-                }}
-                className={`grid ${TASK_GRID_COLUMNS} cursor-pointer gap-3 px-3 py-2 text-left hover:bg-accent`}
-              >
-                <span className="truncate font-mono text-xs text-muted-foreground">
-                  {clickUpTaskReference(task)}
-                </span>
-                <span className="truncate text-sm text-foreground">{task.name}</span>
-                <span className="truncate text-xs text-muted-foreground">{task.status.name}</span>
-                <span className="truncate text-xs text-muted-foreground">{task.list.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(task.updatedAt).toLocaleDateString()}
-                </span>
-                <div className="flex items-center justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      handleStartWorkspace(task)
-                    }}
-                  >
-                    <ArrowRight />
-                    <span className="sr-only">
-                      {translate('auto.components.clickup.page.startWorkspace', 'Start workspace')}
-                    </span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      void window.api.shell.openUrl(task.url)
-                    }}
-                  >
-                    <ExternalLink />
-                    <span className="sr-only">
-                      {translate('auto.components.clickup.page.openTask', 'Open in ClickUp')}
-                    </span>
-                  </Button>
-                </div>
-              </div>
-            ))}
+        <ClickUpRateLimitNotice />
+        {error || scope.error ? (
+          <div className="border-b border-border px-4 py-3 text-sm text-destructive">
+            {error ?? scope.error}
           </div>
-        </div>
+        ) : null}
+        {scope.preferences.view === 'gantt' ? (
+          <ClickUpTaskGantt
+            tasks={visibleTasks}
+            zoom={scope.preferences.ganttZoom}
+            groupBy={scope.preferences.ganttGroupBy}
+            onZoomChange={(ganttZoom) => scope.updatePreferences({ ganttZoom })}
+            onGroupByChange={(ganttGroupBy) => scope.updatePreferences({ ganttGroupBy })}
+            onOpenTask={setSelectedTask}
+          />
+        ) : (
+          <ClickUpTaskListTable
+            tasks={visibleTasks}
+            loading={loading}
+            error={error}
+            onOpenTask={setSelectedTask}
+            onStartWorkspace={handleStartWorkspace}
+          />
+        )}
       </div>
       <ClickUpTaskDetailSheet
         task={selectedTask}

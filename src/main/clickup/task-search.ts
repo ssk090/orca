@@ -3,7 +3,11 @@ import {
   getMatchingClickUpWorkspaces,
   parseClickUpTaskInput
 } from '../../shared/clickup-task-url'
-import type { ClickUpTask, ClickUpWorkspaceSelection } from '../../shared/clickup-types'
+import type {
+  ClickUpTask,
+  ClickUpTaskScope,
+  ClickUpWorkspaceSelection
+} from '../../shared/clickup-types'
 import {
   clickUpRequest,
   getStatus,
@@ -13,6 +17,7 @@ import {
 } from './client'
 import { getClickUpTaskInWorkspace } from './task-lookup'
 import { normalizeClickUpTask } from './task-mapping'
+import { appendClickUpTaskScope } from './task-scope'
 
 // Why paging: ClickUp's v2 API has no task-name filter (GET /team/{id}/task only
 // filters by assignee, status, List, tag, dates and custom fields; text search
@@ -55,7 +60,12 @@ onClickUpDisconnect(() => {
   searchGenerations.clear()
 })
 
-function pageQuery(scope: SearchScope, page: number, viewerId: number | undefined): string {
+function pageQuery(
+  scope: SearchScope,
+  page: number,
+  viewerId: number | undefined,
+  taskScope?: ClickUpTaskScope
+): string {
   const query = new URLSearchParams({
     page: String(page),
     // Why no reverse: ClickUp already sorts newest first; reverse=true returned
@@ -68,6 +78,7 @@ function pageQuery(scope: SearchScope, page: number, viewerId: number | undefine
     query.set('include_closed', 'true')
     query.append('assignees[]', String(viewerId))
   }
+  appendClickUpTaskScope(query, taskScope)
   return query.toString()
 }
 
@@ -75,9 +86,10 @@ function getSearchPage(
   client: ClickUpClientForWorkspace,
   scope: SearchScope,
   page: number,
-  viewerId: number | undefined
+  viewerId: number | undefined,
+  taskScope?: ClickUpTaskScope
 ): Promise<TaskPage> {
-  const query = pageQuery(scope, page, viewerId)
+  const query = pageQuery(scope, page, viewerId, taskScope)
   const key = `${client.token}\u0000${client.workspace.id}\u0000${query}`
   const cached = pageCache.get(key)
   if (cached && Date.now() - cached.loadedAt < PAGE_CACHE_TTL_MS) {
@@ -175,7 +187,8 @@ async function scanWorkspace(
   client: ClickUpClientForWorkspace,
   query: string,
   limit: number,
-  viewerId: number | undefined
+  viewerId: number | undefined,
+  taskScope?: ClickUpTaskScope
 ): Promise<RankedTask[]> {
   const workspaceKey = `${client.token}\u0000${client.workspace.id}`
   const generation = (searchGenerations.get(workspaceKey) ?? 0) + 1
@@ -200,7 +213,7 @@ async function scanWorkspace(
       const pageNumbers = Array.from({ length: batchSize }, (_, index) => first + index)
       first += batchSize
       const pages = await Promise.all(
-        pageNumbers.map((page) => getSearchPage(client, scope, page, viewerId))
+        pageNumbers.map((page) => getSearchPage(client, scope, page, viewerId, taskScope))
       )
       for (const page of pages) {
         for (const task of page.tasks) {
@@ -224,7 +237,8 @@ async function scanWorkspace(
 export async function searchClickUpTasks(
   query: string,
   limit = 20,
-  workspaceId?: ClickUpWorkspaceSelection | null
+  workspaceId?: ClickUpWorkspaceSelection | null,
+  taskScope?: ClickUpTaskScope
 ): Promise<ClickUpTask[]> {
   const trimmed = query.trim()
   if (!trimmed) {
@@ -240,7 +254,7 @@ export async function searchClickUpTasks(
   }
   const viewerId = getStatus().viewer?.id
   const scanned = await Promise.all(
-    clients.map((client) => scanWorkspace(client, trimmed, safeLimit, viewerId))
+    clients.map((client) => scanWorkspace(client, trimmed, safeLimit, viewerId, taskScope))
   )
   return scanned
     .flat()

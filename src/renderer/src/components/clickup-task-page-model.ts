@@ -20,6 +20,28 @@ export function getClickUpFilters(): { value: ClickUpTaskFilter; label: string }
   ]
 }
 
+// Client-side twin of the main-process listing filter, for search results,
+// which ClickUp returns regardless of assignee or state.
+export function matchesClickUpTaskFilter(
+  task: ClickUpTask,
+  filter: ClickUpTaskFilter,
+  viewerId: number | undefined
+): boolean {
+  const closed = task.status.type === 'closed' || Boolean(task.closedAt)
+  switch (filter) {
+    case 'assigned':
+      return viewerId === undefined || task.assignees.some((assignee) => assignee.id === viewerId)
+    case 'created':
+      return viewerId !== undefined && task.creator?.id === viewerId
+    case 'open':
+      return !closed
+    case 'completed':
+      return closed
+    case 'all':
+      return true
+  }
+}
+
 export function clickUpTaskReference(task: ClickUpTask): string {
   return task.customId ?? task.id
 }

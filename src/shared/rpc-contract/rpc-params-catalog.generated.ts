@@ -823,6 +823,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'clickup.getTask': ClickUpTaskId,
   'clickup.listLists': ClickUpListLists,
   'clickup.listMembers': ClickUpWorkspaceSelection,
+  'clickup.listSpaces': ClickUpWorkspaceSelection,
   'clickup.listTags': ClickUpWorkspaceSelection,
   'clickup.listTasks': ClickUpListTasks,
   'clickup.searchTasks': ClickUpSearchTasks,
