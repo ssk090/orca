@@ -1,4 +1,4 @@
 provider: github
-owner: stablyai
+owner: ssk090
 repo: orca
 updaterCacheDirName: orca-updater

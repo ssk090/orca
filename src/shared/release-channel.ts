@@ -24,7 +24,10 @@ export const RELEASE_CHANNEL_LABELS: Readonly<Record<ReleaseChannel, string>> = 
 export const HOURLY_RELEASE_REPO = 'stablyai/orca-hourly'
 export const DAILY_RELEASE_REPO = 'stablyai/orca-daily'
 export const ADHOC_RELEASE_REPO = 'stablyai/orca-adhoc'
-export const MAIN_RELEASE_REPO = 'stablyai/orca'
+// Why ssk090: this fork's stable/RC builds ship from its own releases, so the
+// updater, release-notes links and pinned-build picker must never install an
+// official stablyai build over it. The dev-channel repos above stay upstream.
+export const MAIN_RELEASE_REPO = 'ssk090/orca'
 
 /** The dev channels, each published to its own repo rather than the main one. */
 const DEDICATED_REPO_CHANNELS = ['hourly', 'daily', 'adhoc'] as const

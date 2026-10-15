@@ -39,6 +39,7 @@ describe('electron-builder dev-channel identity', () => {
 
     expect(config.win.signtoolOptions.publisherName).toBe('SignPath Foundation')
     expect(config.win.verifyUpdateCodeSignature).toBeUndefined()
+    expect(config.publish.owner).toBe('ssk090')
     expect(config.publish.repo).toBe('orca')
     expect(config.publish.releaseType).toBe('draft')
   })
@@ -60,6 +61,7 @@ describe('electron-builder dev-channel identity', () => {
   ])('publishes %s Windows builds to its own repo as a prerelease', (_channel, env, repo) => {
     const config = loadConfigWithEnv(env)
 
+    expect(config.publish.owner).toBe('stablyai')
     expect(config.publish.repo).toBe(repo)
     expect(config.publish.releaseType).toBe('prerelease')
   })

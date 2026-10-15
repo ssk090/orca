@@ -787,7 +787,9 @@ module.exports = {
   npmRebuild: true,
   publish: {
     provider: 'github',
-    owner: 'stablyai',
+    // Why ssk090 for stable/RC: this fork publishes its own releases (matches
+    // MAIN_RELEASE_REPO); dev-channel CI builds still target upstream's repos.
+    owner: devChannelRepo ? 'stablyai' : 'ssk090',
     repo: devChannelRepo ?? 'orca',
     // Why draft on the main repo: `--publish always` otherwise creates a
     // public GitHub release as soon as the first platform uploads, and
