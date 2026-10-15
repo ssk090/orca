@@ -19,8 +19,8 @@ import {
   getMixedWorktreeHostContextLabels,
   getNoticeHostContextLabels
 } from './host-labels'
-import { buildProjectGroupingIndex } from './project-grouping'
-import type { ProjectGroupingModel } from './project-grouping'
+import { buildProjectGroupingIndex } from '../../../../../../shared/project-section-grouping'
+import type { ProjectGroupingModel } from '../../../../../../shared/project-section-grouping'
 import { appendProjectGroupSections } from './project-group-sections'
 import { getPinnedSectionWorktrees } from '../../pinned-section-worktrees'
 import { emitPinnedGroup } from './pinned-group-rows'
@@ -42,7 +42,8 @@ import type {
   Row,
   WorktreeGroupBy
 } from './row-types'
-import { getRenderedNaturalAnchorRepoIds, withRepoSectionDisplayLabels } from './section-order'
+import { getRenderedNaturalAnchorRepoIds } from './section-order'
+import { withRepoSectionDisplayLabels } from '../../../../../../shared/project-section-order'
 import { buildOrderedGroups } from './worktree-grouping'
 
 export function buildRows(
@@ -105,8 +106,11 @@ export function buildRows(
     pinnedDisplayPolicy === 'duplicate-in-groups'
       ? worktrees
       : worktrees.filter((worktree) => !pinnedSectionIds.has(getWorktreeHostIdentity(worktree)))
+  // Why the full set: under the default pinned policy a pinned worktree exists
+  // only in the Pinned section, and its host is part of whether the sidebar is
+  // mixed at all. Scoping to naturalWorktrees left pinned remotes unlabelled.
   const mixedWorktreeHostContextLabels = getMixedWorktreeHostContextLabels(
-    naturalWorktrees,
+    worktrees,
     repoMap,
     hostLabelById,
     defaultHostId
@@ -145,7 +149,8 @@ export function buildRows(
     worktreeMap,
     nestLineage,
     cyclicLineageIds,
-    noticeHostContextLabelByRepoId
+    noticeHostContextLabelByRepoId,
+    mixedWorktreeHostContextLabels
   )
   if (groupBy === 'none') {
     // Why folder workspaces gate this too: an account with only folder

@@ -31,6 +31,7 @@ function createInput(
     linkedClickUpTaskId: undefined,
     linkedClickUpWorkspaceId: undefined,
     branchNameOverride: undefined,
+    parentWorktreeId: null,
     workspaceStatus: undefined,
     linkedGitLabMR: null,
     linkedGitLabIssue: null,
@@ -42,8 +43,10 @@ function createInput(
     startupPlan: null,
     quickPrompt: '',
     launchDraftPrompt: '',
+    promptDelivery: 'auto-submit',
     quickTelemetry: null,
     suppressTerminalFocusOnCompletion: false,
+    setupOnly: false,
     ...overrides
   }
 }
@@ -59,11 +62,13 @@ describe('quick composer creation request', () => {
       linkedTaskSourceContext: null,
       name: 'characterize-request',
       setupDecision: 'inherit',
+      setupOnly: false,
       agent: null,
       pendingFirstAgentMessageRename: false,
       note: '',
       startupPlan: null,
       quickPrompt: '',
+      promptDelivery: 'auto-submit',
       quickTelemetry: null
     })
     expect(request).not.toHaveProperty('baseBranch')
@@ -89,10 +94,12 @@ describe('quick composer creation request', () => {
         linkedLinearIssueWorkspaceId: 'workspace-1',
         linkedLinearIssueOrganizationUrlKey: 'orca',
         branchNameOverride: 'feature',
+        parentWorktreeId: 'repo-1::/worktrees/parent',
         workspaceStatus: 'in-progress',
         linkedGitLabMR: 9,
         linkedGitLabIssue: 8,
         launchDraftPrompt: 'draft',
+        promptDelivery: 'draft',
         suppressTerminalFocusOnCompletion: true
       })
     )
@@ -109,7 +116,9 @@ describe('quick composer creation request', () => {
       linkedGitLabMR: 9,
       linkedGitLabIssue: 8,
       branchNameOverride: 'feature',
+      parentWorktreeId: 'repo-1::/worktrees/parent',
       launchDraftPrompt: 'draft',
+      promptDelivery: 'draft',
       suppressTerminalFocusOnCompletion: true
     })
   })
@@ -132,5 +141,16 @@ describe('quick composer creation request', () => {
     expect(request).not.toHaveProperty('sparseCheckout')
     expect(request).not.toHaveProperty('linkedGitLabMR')
     expect(request).not.toHaveProperty('linkedGitLabIssue')
+  })
+
+  it('keeps setupOnly only for agentless creates', () => {
+    expect(buildQuickCreationRequest(createInput({ setupOnly: true }))).toHaveProperty(
+      'setupOnly',
+      true
+    )
+    expect(
+      buildQuickCreationRequest(createInput({ setupOnly: true, agent: 'claude' }))
+    ).not.toHaveProperty('setupOnly')
+    expect(buildQuickCreationRequest(createInput())).toHaveProperty('setupOnly', false)
   })
 })

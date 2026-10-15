@@ -14,11 +14,7 @@ import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store'
 import { SearchableSetting } from './SearchableSetting'
 import { SettingsSubsectionHeader } from './SettingsFormControls'
-import {
-  ClickUpSetupSteps,
-  CodeHostSetupSteps,
-  JiraSetupSteps
-} from './TaskSourceSimpleSetup'
+import { ClickUpSetupSteps, CodeHostSetupSteps, JiraSetupSteps } from './TaskSourceSimpleSetup'
 import { TaskSourceLinearSetup } from './TaskSourceLinearSetup'
 import { TaskSourceProviderCard } from './TaskSourceProviderCard'
 import {

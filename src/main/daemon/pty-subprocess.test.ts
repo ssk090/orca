@@ -72,8 +72,9 @@ vi.mock('../providers/agent-foreground-process', () => ({
 // fake timers; default to "shell-only" so the degraded-scan guard falls through
 // to its existing retirement logic (the degraded-scan behavior itself is
 // covered in pty-subprocess-foreground-degraded-scan.test.ts).
-vi.mock('../providers/windows-conpty-process-membership', () => ({
-  readWindowsConptyProcessIds: () => Promise.resolve(new Set([12345]))
+vi.mock('../providers/windows-pty-job-membership', () => ({
+  readWindowsPtyJobProcessIds: () => new Set([12345]),
+  isWindowsPtyJobReadable: () => true
 }))
 
 import { createPtySubprocess, checkPtySpawnHealth } from './pty-subprocess'
@@ -183,11 +184,6 @@ describe('createPtySubprocess', () => {
   })
 
   it('uses a new daemon protocol for the macOS login preflight host behavior', () => {
-    expect(PROTOCOL_VERSION).toBeGreaterThan(22)
-    expect(PREVIOUS_DAEMON_PROTOCOL_VERSIONS).toContain(22)
-  })
-
-  it('uses a new daemon protocol for daemon-local Codex env ownership', () => {
     expect(PROTOCOL_VERSION).toBeGreaterThan(22)
     expect(PREVIOUS_DAEMON_PROTOCOL_VERSIONS).toContain(22)
   })

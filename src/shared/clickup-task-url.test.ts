@@ -27,14 +27,14 @@ describe('parseClickUpTaskUrl', () => {
   })
 
   it('ignores a trailing slug on a native task URL', () => {
-    expect(parseClickUpTaskUrl('https://app.clickup.com/t/86abc123/task-title?view=detail')).toEqual(
-      {
-        taskId: '86abc123',
-        isCustomId: false,
-        workspaceId: null,
-        origin: 'https://app.clickup.com'
-      }
-    )
+    expect(
+      parseClickUpTaskUrl('https://app.clickup.com/t/86abc123/task-title?view=detail')
+    ).toEqual({
+      taskId: '86abc123',
+      isCustomId: false,
+      workspaceId: null,
+      origin: 'https://app.clickup.com'
+    })
   })
 
   it.each([

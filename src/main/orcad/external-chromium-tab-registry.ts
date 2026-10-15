@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
-import type { RuntimeBrowserCommandHost } from '../runtime/orca-runtime-browser'
+import type { RuntimeBrowserCommandHost } from '../runtime/browser/browser-command-contracts'
 import { BrowserError } from '../browser/browser-error'
 import { normalizeBrowserNavigationUrl } from '../../shared/browser-url'
 import type { ExternalChromiumBrowserSession } from './external-chromium-browser-session'
@@ -74,11 +74,12 @@ export class ExternalChromiumTabRegistry {
     this.pagesByPublicId.set(publicPageId, page)
     this.pagesByAgentId.set(agentPageId, page)
     this.setActivePage(page)
-    host.markHeadlessBrowserSessionTabActive?.(
-      worktreeId,
-      publicPageId,
-      typeof params.targetGroupId === 'string' ? params.targetGroupId : undefined
-    )
+    host.markHeadlessBrowserSessionTabActive?.(worktreeId, publicPageId, {
+      ...(typeof params.targetGroupId === 'string' ? { targetGroupId: params.targetGroupId } : {}),
+      // Why true: an external-Chromium create has no paired-device caller to stay local for, so it
+      // steers every screen exactly as this call did before create learned to stay local.
+      focusesHost: true
+    })
     if (worktreeId) {
       host.notifyHeadlessBrowserSessionTabsChanged?.(worktreeId)
     }

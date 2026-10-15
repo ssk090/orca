@@ -1,11 +1,16 @@
 import type { ClickUpTask } from '../clickup-types'
+import {
+  buildClickUpSourceRows,
+  type ClickUpSourceRow
+} from './smart-workspace-clickup-source-rows'
 import type { GitHubWorkItem } from '../github/work-item-types'
 import type { GitLabWorkItem } from '../gitlab-types'
 import type { JiraIssue } from '../jira-types'
 import type { LinearIssue } from '../linear/issue-types'
 import type { LinearCollectionResult } from '../linear/workspace-types'
 import type { BaseRefSearchResult } from '../repo-types'
-import { JIRA_ISSUE_KEY_PATTERN, parseJiraIssueUrl } from '../jira-issue-url'
+import { parseJiraIssueUrl } from '../jira-issue-url'
+import { buildJiraTextMatchJql } from '../jira-search-input-jql'
 import type { GitHubIssueOrPRLink } from '../github/links'
 import {
   buildSmartWorkspaceUrlSourceRows,
@@ -18,15 +23,9 @@ export {
   isSmartWorkspaceSourceQueryWithinLimit
 } from './smart-workspace-source-query'
 
-export type SmartNameMode =
-  | 'smart'
-  | 'github'
-  | 'gitlab'
-  | 'branches'
-  | 'linear'
-  | 'jira'
-  | 'clickup'
-  | 'text'
+type TrackerMode = 'linear' | 'jira' | 'clickup'
+
+export type SmartNameMode = 'smart' | 'github' | 'gitlab' | 'branches' | TrackerMode | 'text'
 
 export type SmartWorkspaceSourceRow =
   | { kind: 'use-name'; value: string; name: string }
@@ -36,7 +35,7 @@ export type SmartWorkspaceSourceRow =
   | { kind: 'branch'; value: string; refName: string; localBranchName: string }
   | { kind: 'linear'; value: string; issue: LinearIssue }
   | { kind: 'jira'; value: string; issue: JiraIssue }
-  | { kind: 'clickup'; value: string; task: ClickUpTask }
+  | ClickUpSourceRow
 
 type LinearIssueSourceInput = LinearIssue[] | LinearCollectionResult<LinearIssue> | null | undefined
 
@@ -55,16 +54,12 @@ export function getSmartWorkspaceEmptyHint(mode: SmartNameMode): string {
   return EMPTY_HINT_BY_MODE[mode]
 }
 
-export function buildJiraIssueSearchJql(query: string): string | null {
+/** The trimmed query when it is short enough and has words to search for; null otherwise. */
+export function getJiraIssueSearchQuery(query: string): string | null {
   const trimmed = query.trim()
-  if (!trimmed || !isSmartWorkspaceSourceQueryWithinLimit(trimmed)) {
-    return null
-  }
-  if (JIRA_ISSUE_KEY_PATTERN.test(trimmed)) {
-    return `key = "${trimmed.toUpperCase()}"`
-  }
-  const escaped = trimmed.replaceAll('\\', '\\\\').replaceAll('"', '\\"')
-  return `text ~ "${escaped}*"`
+  return isSmartWorkspaceSourceQueryWithinLimit(trimmed) && buildJiraTextMatchJql(trimmed)
+    ? trimmed
+    : null
 }
 
 export function isBlockingJiraUrlIntent(mode: SmartNameMode, value: string): boolean {
@@ -334,14 +329,6 @@ export function buildSmartWorkspaceSourceRows({
   if (mode === 'jira') {
     nextRows.push(...jiraIssues.map(toJiraSourceRow))
   }
-  if (clickUpAvailable && (mode === 'smart' || mode === 'clickup')) {
-    nextRows.push(
-      ...clickUpTasks.map((task) => ({
-        kind: 'clickup' as const,
-        value: `clickup-${task.workspaceId}-${task.id}`,
-        task
-      }))
-    )
-  }
+  nextRows.push(...buildClickUpSourceRows({ clickUpAvailable, clickUpTasks, mode }))
   return nextRows.slice(0, resultLimit + 1)
 }

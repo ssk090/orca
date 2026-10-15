@@ -1,4 +1,8 @@
-import type { WorkspaceStatus, WorkspaceStatusDefinition, Worktree } from '../../../../shared/worktree/types'
+import type {
+  WorkspaceStatus,
+  WorkspaceStatusDefinition,
+  Worktree
+} from '../../../../shared/worktree/types'
 import { getWorkspaceStatus } from '../../../../shared/workspace-statuses'
 
 export type WorkspaceBoardTaskStatusSyncRequest = {

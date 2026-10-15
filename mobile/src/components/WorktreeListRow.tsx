@@ -1,12 +1,13 @@
 import { memo } from 'react'
 import { Bell, ChevronDown, ChevronRight, GitBranch, GitPullRequest } from 'lucide-react-native'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import type { RepoIcon } from '../../../src/shared/repo-icon'
-import type { AgentWorkingMode } from '../../../src/shared/agent-status-types'
-import type { RuntimeWorktreeAgentRow } from '../../../src/shared/runtime-types'
+import type { MobileRenderableRepoIcon } from '../host-screen/host-screen-reply-schema'
 import { triggerMediumImpact } from '../platform/haptics'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import type { Worktree } from '../worktree/workspace-list-types'
+import { areStructurallyEqual } from '../worktree/structural-equality'
 import { AgentSpinner } from './AgentSpinner'
+import { HostKindIcon } from './HostKindIcon'
 import { MobileRepoIcon } from './MobileRepoIcon'
 import { WorktreeAgentList } from './WorktreeAgentList'
 import { WorktreeMetaGlyphs, prStateColor } from './WorktreeMetaGlyphs'
@@ -17,50 +18,24 @@ function displayBranch(branch: string): string {
   return branch.replace(/^refs\/heads\//, '')
 }
 
-// Minimal row shape needed for rendering — a structural subset of the screen's
-// Worktree so this component stays decoupled from the screen's local type.
-export type WorktreeListRowItem = {
-  workspaceKind?: 'git' | 'folder-workspace'
-  worktreeId: string
-  repo: string
-  branch: string
-  displayName: string
-  path?: string
-  liveTerminalCount: number
-  preview: string
-  unread: boolean
-  isActive?: boolean
-  linkedPR: { number: number; state: string } | null
-  linkedIssue?: number | null
-  linkedLinearIssue?: string | null
-  linkedGitLabMR?: number | null
-  linkedGitLabIssue?: number | null
-  comment?: string
-  lineageDepth?: number
-  lineageChildCount?: number
-  lineageCollapsed?: boolean
-  agents?: RuntimeWorktreeAgentRow[]
-  workingMode?: AgentWorkingMode
-}
-
 type WorktreeRollupStatus = 'working' | 'active' | 'permission' | 'done' | 'inactive'
 
-type Props<T extends WorktreeListRowItem> = {
-  item: T
+type Props = {
+  item: Worktree
   isReadOnly: boolean
   now: number
   repoColor: string
-  repoIcon?: RepoIcon | null
+  repoIcon?: MobileRenderableRepoIcon | null
   // When the list is already grouped under this repo's section header, the row
   // omits its own repo icon+name to avoid the redundant "📁 orca" on every row.
   hideRepo?: boolean
   status: WorktreeRollupStatus
-  onPress: (item: T) => void
-  onLongPress?: (item: T) => void
-  onToggleLineage?: (item: T) => void
+  onPress: (item: Worktree) => void
+  onLongPress?: (item: Worktree) => void
+  onToggleLineage?: (item: Worktree) => void
 }
 
-function WorktreeListRowComponent<T extends WorktreeListRowItem>({
+function WorktreeListRowComponent({
   item,
   isReadOnly,
   now,
@@ -71,7 +46,7 @@ function WorktreeListRowComponent<T extends WorktreeListRowItem>({
   onPress,
   onLongPress,
   onToggleLineage
-}: Props<T>) {
+}: Props) {
   const isFolderWorkspace = item.workspaceKind === 'folder-workspace'
   const folderMeta = item.comment?.trim() || item.path || 'Folder'
   const metaText = isFolderWorkspace ? folderMeta : displayBranch(item.branch)
@@ -150,6 +125,25 @@ function WorktreeListRowComponent<T extends WorktreeListRowItem>({
               <Text style={styles.childBadgeText}>Child</Text>
             </View>
           )}
+          {item.hostContextLabel ? (
+            <View
+              style={[styles.childBadge, styles.hostBadge]}
+              accessibilityLabel={[item.hostContextLabel, item.hostContextHealthLabel]
+                .filter(Boolean)
+                .join(', ')}
+            >
+              <HostKindIcon hostId={item.hostContextHostId ?? item.hostId} size={10} />
+              <Text style={[styles.childBadgeText, styles.hostBadgeText]} numberOfLines={1}>
+                {item.hostContextLabel}
+              </Text>
+              {/* Why separate Text: the name truncates first so the health word stays readable. */}
+              {item.hostContextHealthLabel ? (
+                <Text style={[styles.childBadgeText, styles.hostHealthText]}>
+                  {`· ${item.hostContextHealthLabel}`}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
           {/* Repo glyph+name only when not already grouped under this repo;
               MobileRepoIcon falls back to a Folder (matching desktop's default)
               rather than a bare colored dot. */}
@@ -198,7 +192,7 @@ function WorktreeListRowComponent<T extends WorktreeListRowItem>({
   )
 }
 
-export const WorktreeListRow = memo(WorktreeListRowComponent) as typeof WorktreeListRowComponent
+export const WorktreeListRow = memo(WorktreeListRowComponent, areStructurallyEqual)
 
 const styles = StyleSheet.create({
   worktreeRow: {
@@ -291,7 +285,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textMuted,
     fontFamily: typography.monoFamily,
-    flexShrink: 1
+    // Why: path takes only leftover space so badges truncate last.
+    flex: 1
   },
   childBadge: {
     flexDirection: 'row',
@@ -305,6 +300,17 @@ const styles = StyleSheet.create({
   childBadgeText: {
     fontSize: 10,
     color: colors.textMuted
+  },
+  // Why the cap is on the name, not the badge: a health word after a long name must stay readable.
+  hostBadge: {
+    flexShrink: 1
+  },
+  hostBadgeText: {
+    flexShrink: 1,
+    maxWidth: 100
+  },
+  hostHealthText: {
+    flexShrink: 0
   },
   lineageToggle: {
     alignSelf: 'flex-start',

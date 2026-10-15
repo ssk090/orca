@@ -98,7 +98,7 @@ const storeState = vi.hoisted(() => ({
   hostedReviewCache: {} as Record<string, { data: unknown }>
 }))
 
-vi.mock('@/lib/worktree-git-identity-display', () => ({
+vi.mock('../../../../shared/worktree/git-identity-display', () => ({
   getWorktreeGitIdentityDisplay: () => ({ kind: 'branch', branchName: 'feature' })
 }))
 
@@ -172,6 +172,20 @@ describe('check-run-details-fix-with-ai', () => {
       title: 'Fix CI',
       url: 'https://github.com/acme/widgets/pull/42'
     })
+  })
+
+  it('does not resolve a matching suppressed GitHub PR', () => {
+    storeState.worktreesByRepo = {
+      'repo-1': [
+        {
+          ...fixtures.worktree,
+          linkedPR: null,
+          suppressedGitHubPR: fixtures.pr.number
+        }
+      ]
+    }
+
+    expect(resolveHostedReviewForCheckRunDetailsFix(fixtures.worktree.id)).toBeNull()
   })
 
   it('requires a hosted review before launching an AI fix', () => {

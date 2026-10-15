@@ -2,7 +2,7 @@ import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { runProcess, spawnProcess } from '../../shared/child-process/run-process'
+import { runProcess, spawnProcess } from '@orca/process-host'
 import { ExternalChromiumBrowserProcess } from './external-chromium-browser-process'
 import { installedElectronCandidates, resolveOrcadBrowserProvider } from './orcad-browser-provider'
 import { orcadAgentBrowserNativeName } from './orcad-agent-browser-binary'
@@ -11,7 +11,7 @@ import {
   setRuntimeBrowserUnavailableCause
 } from '../runtime/runtime-browser-commands-factory'
 
-vi.mock('../../shared/child-process/run-process', () => ({
+vi.mock('@orca/process-host', () => ({
   runProcess: vi.fn(),
   spawnProcess: vi.fn()
 }))
@@ -108,6 +108,18 @@ describe('ExternalChromiumBrowserProcess', () => {
     const commands = processHandle.createCommands({
       getAgentBrowserBridge: () => null,
       resolveWorktreeSelector: async (selector) => ({ id: selector }),
+      resolveBrowserWorkspace: async (selector) => ({ id: selector }),
+      // Unused by the sidecar command paths under test; the daemon's real host is
+      // OrcaRuntimeService, which owns the client-hosted registries.
+      resolveBrowserNetworkExecutionHost: () => {
+        throw new Error('No browser network execution host')
+      },
+      getBrowserHostLeaseRegistry: () => {
+        throw new Error('No browser host lease registry')
+      },
+      getRuntimeBrowserPageRegistry: () => {
+        throw new Error('No runtime browser page registry')
+      },
       getAuthoritativeWindow: () => {
         throw new Error('No renderer')
       },

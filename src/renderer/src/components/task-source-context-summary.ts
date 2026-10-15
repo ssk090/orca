@@ -151,7 +151,7 @@ function getRepoBackedTaskSourceSummary(args: {
   }
 }
 
-function getAccountBackedTaskSourceSummary(
+export function getAccountBackedTaskSourceSummary(
   providerLabel: string,
   args: {
     accountLabel: string | null | undefined
@@ -181,7 +181,6 @@ function getAccountBackedTaskSourceSummary(
     title: titleParts.join(' · ')
   }
 }
-
 
 function uniqueLabels(labels: readonly (string | null | undefined)[]): string[] {
   const seen = new Set<string>()

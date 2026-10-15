@@ -1,26 +1,46 @@
-import type { ClickUpComment, ClickUpCommentResult, ClickUpConnectionStatus, ClickUpCreateTaskArgs, ClickUpCreateTaskResult, ClickUpList, ClickUpMutationResult, ClickUpTag, ClickUpTask, ClickUpTaskFilter, ClickUpTaskUpdate, ClickUpUser, ClickUpViewer, ClickUpWorkspaceSelection } from '../../../shared/clickup-types'
+import type {
+  ClickUpComment,
+  ClickUpCommentResult,
+  ClickUpConnectionStatus,
+  ClickUpCreateTaskArgs,
+  ClickUpCreateTaskResult,
+  ClickUpList,
+  ClickUpMutationResult,
+  ClickUpTag,
+  ClickUpTask,
+  ClickUpTaskFilter,
+  ClickUpTaskUpdate,
+  ClickUpUser,
+  ClickUpViewer,
+  ClickUpWorkspaceSelection
+} from '../../../shared/clickup-types'
 import type { GlobalSettings } from '../../../shared/global-settings-types'
-import { callRuntimeRpc, getActiveRuntimeTarget } from './runtime-rpc-client'
+import { callRuntimeRpc } from './runtime-rpc-client'
+import type { RuntimeClientTarget } from '../../../shared/runtime-client-target'
 import {
-  getTaskSourceRuntimeSettings,
-  type TaskSourceContext
-} from '../../../shared/task-source-context'
+  defaultScopeHost,
+  rowLessSourceTarget,
+  type RowLessSource
+} from '@/lib/default-creation-host'
 import { isRuntimeProviderSearchQueryWithinLimit } from './runtime-provider-search-bounds'
 
+// Why: ClickUp is a row-less source like Linear and Jira. Store callers still
+// pass raw settings, which route to the default scope host.
 export type RuntimeClickUpSettings =
+  | RowLessSource
   | Pick<GlobalSettings, 'activeRuntimeEnvironmentId'>
-  | TaskSourceContext
   | null
   | undefined
 
-function isTaskSourceContext(settings: RuntimeClickUpSettings): settings is TaskSourceContext {
-  return settings !== null && settings !== undefined && 'kind' in settings
+export function getClickUpRuntimeTarget(settings: RuntimeClickUpSettings): RuntimeClientTarget {
+  if (settings && 'kind' in settings) {
+    return rowLessSourceTarget(settings)
+  }
+  return defaultScopeHost(settings)
 }
 
-function targetFor(settings: RuntimeClickUpSettings): ReturnType<typeof getActiveRuntimeTarget> {
-  return getActiveRuntimeTarget(
-    isTaskSourceContext(settings) ? getTaskSourceRuntimeSettings(settings) : settings
-  )
+function targetFor(settings: RuntimeClickUpSettings): RuntimeClientTarget {
+  return getClickUpRuntimeTarget(settings)
 }
 
 function withLocalTimeout<T>(request: Promise<T>, timeoutMs: number): Promise<T> {

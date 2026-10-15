@@ -4,7 +4,11 @@ import type {
   SetupDecision
 } from '../../../src/shared/worktree/create-types'
 import type { GitPushTarget } from '../../../src/shared/worktree/types'
-import { getWorkspaceSourceName } from '../../../src/shared/new-workspace/workspace-source'
+import type { RpcSendParams } from '../transport/rpc-params-contract'
+import {
+  buildJiraWorkspaceSource,
+  getWorkspaceSourceName
+} from '../../../src/shared/new-workspace/workspace-source'
 import { resolveMobileWorkspaceCreateName } from './mobile-workspace-name'
 import type { WorkspaceAgentChoice } from './workspace-agent-selection'
 
@@ -50,13 +54,12 @@ type WorkspaceCreateLinearItem = {
   }
 }
 
-type WorkspaceCreateClickUpItem = {
-  provider: 'clickup'
+type WorkspaceCreateJiraItem = {
+  provider: 'jira'
   source: {
-    taskId: string
+    key: string
     title: string
     url: string
-    workspaceId?: string
   }
 }
 
@@ -64,17 +67,20 @@ export type WorkspaceCreateTaskItem =
   | WorkspaceCreateGitHubItem
   | WorkspaceCreateGitLabItem
   | WorkspaceCreateLinearItem
-  | WorkspaceCreateClickUpItem
+  | WorkspaceCreateJiraItem
 
-export type WorkspaceCreateParams = Record<string, unknown>
+/** The outgoing worktree.create params, so the builder and the operation agree by type. */
+export type WorkspaceCreateParams = RpcSendParams<'worktree.create'>
 
 /**
- * `worktree.create` fields for launching the picked agent in a fresh session.
+ * `worktree.create` fields that create the worktree agent-first, so its startup terminal is the
+ * agent. Send the agent id rather than a command so the host resolves launch args (permission
+ * flags) and host-shell quoting, matching the "+" new-tab and CLI paths.
  *
- * Why: send the agent id so the host resolves launch args (permission flags)
- * and host-shell quoting, matching the "+" new-tab and CLI paths.
+ * These stay on every create: when the host routes through `agent.launch` it strips them and picks
+ * the surface itself, and when it cannot, they are still what makes the agent start.
  */
-export function agentLaunchCreateFields(agentId: TuiAgent | undefined): {
+export function startupAgentCreateFields(agentId: TuiAgent | undefined): {
   startupAgent?: TuiAgent
   createdWithAgent?: TuiAgent
 } {
@@ -119,8 +125,7 @@ export function buildTaskWorkspaceCreateParams(args: {
   const comment = note?.trim()
   const selectedBaseBranch = baseBranch || hostedStartPoint?.baseBranch
   const selectedPushTarget = pushTarget ?? hostedStartPoint?.pushTarget
-  // Why: desktop only sends displayName while the name is still auto-derived; a
-  // user-edited name suppresses it so the runtime keeps the user's chosen name.
+  // Preserve provenance so the host can distinguish an intentional label from a generated title.
   const sourceName =
     item.provider === 'linear'
       ? getWorkspaceSourceName({
@@ -131,22 +136,14 @@ export function buildTaskWorkspaceCreateParams(args: {
           url: item.source.url,
           linearIdentifier: item.source.identifier
         })
-      : item.provider === 'clickup'
-        ? getWorkspaceSourceName({
-            provider: 'clickup',
-            type: 'issue',
-            number: 0,
-            title: item.source.title,
-            url: item.source.url,
-            clickupIdentifier: item.source.taskId,
-            clickupWorkspaceId: item.source.workspaceId
-          })
+      : item.provider === 'jira'
+        ? getWorkspaceSourceName(buildJiraWorkspaceSource(item.source))
         : getWorkspaceSourceName({ provider: item.provider, ...item.source })
   const displayName = nameIsAutoManaged
-    ? {
-        displayName: item.provider === 'clickup' ? item.source.title.trim() : sourceName.displayName
-      }
-    : {}
+    ? { displayName: sourceName.displayName, displayNameKind: 'generated' as const }
+    : workspaceName?.trim()
+      ? { displayName: workspaceName, displayNameKind: 'user' as const }
+      : {}
   const common = {
     setupDecision,
     activate: true,
@@ -186,16 +183,16 @@ export function buildTaskWorkspaceCreateParams(args: {
     }
   }
 
-  if (item.provider === 'clickup') {
+  if (item.provider === 'jira') {
+    // Jira uses the same durable linkedWorkItem payload as the desktop composer.
     return {
       repo: `id:${targetRepoId}`,
       name: resolveMobileWorkspaceCreateName({
         draft: workspaceName,
-        fallback: item.source.taskId.toLowerCase()
+        fallback: item.source.key.toLowerCase()
       }),
       ...displayName,
-      linkedClickUpTaskId: item.source.taskId,
-      ...(item.source.workspaceId ? { linkedClickUpWorkspaceId: item.source.workspaceId } : {}),
+      linkedWorkItem: buildJiraWorkspaceSource(item.source),
       ...common
     }
   }

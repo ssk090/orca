@@ -1,4 +1,6 @@
 import type { GlobalSettings } from '../../shared/global-settings-types'
+import { gitExecFileAsync } from '../git/runner'
+import type { getPullRequestDraftContext } from '../text-generation/pull-request-context'
 import {
   mergeLegacyCommitMessageAiIntoSourceControlAi,
   type ResolvedSourceControlAiGenerationParams
@@ -13,8 +15,27 @@ import {
   type RuntimeGitTarget
 } from './runtime-git-command-target'
 
+type PullRequestDraftGitExec = Parameters<typeof getPullRequestDraftContext>[0]
+
+/** Runs the PR draft-context probes on a local target. */
+export function pullRequestDraftGitExec(target: RuntimeGitTarget): PullRequestDraftGitExec {
+  return (argv, options) =>
+    gitExecFileAsync(argv, {
+      cwd: target.worktree.path,
+      ...localGitOptionsForTarget(target),
+      ...(options?.maxBuffer === undefined ? {} : { maxBuffer: options.maxBuffer }),
+      ...(options?.timeoutMs === undefined && options?.timeout === undefined
+        ? {}
+        : { timeout: options?.timeoutMs ?? options?.timeout }),
+      admissionTier: 'interactive'
+    })
+}
+
 export type RuntimeCommitMessageSettingsOverride = Partial<
-  Pick<GlobalSettings, 'commitMessageAi' | 'sourceControlAi' | 'agentCmdOverrides'>
+  Pick<
+    GlobalSettings,
+    'commitMessageAi' | 'sourceControlAi' | 'agentCmdOverrides' | 'defaultTuiAgent'
+  >
 > & {
   commitMessageDiscoveryHostKey?: string
   sourceControlAiResolvedParams?: ResolvedSourceControlAiGenerationParams

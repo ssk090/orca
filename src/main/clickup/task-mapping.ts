@@ -1,4 +1,10 @@
-import type { ClickUpPriority, ClickUpStatus, ClickUpTag, ClickUpTask, ClickUpUser } from '../../shared/clickup-types'
+import type {
+  ClickUpPriority,
+  ClickUpStatus,
+  ClickUpTag,
+  ClickUpTask,
+  ClickUpUser
+} from '../../shared/clickup-types'
 import { getStatus, type ClickUpClientForWorkspace } from './client'
 
 export type JsonRecord = Record<string, unknown>

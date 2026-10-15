@@ -22,6 +22,23 @@ function fakeClient(byMethod: Record<string, unknown>, calls: Call[]): RpcClient
   } as unknown as RpcClient
 }
 
+const workItem = {
+  state: 'open',
+  url: '',
+  labels: [],
+  updatedAt: '2020-01-01T00:00:00.000Z',
+  author: null
+}
+
+const linearIssue = {
+  url: '',
+  state: { name: 'Todo', type: 'unstarted', color: '#000' },
+  team: { id: 'team-1', key: 'ENG', name: 'Engineering' },
+  labels: [],
+  priority: 0,
+  updatedAt: '2020-01-01T00:00:00.000Z'
+}
+
 const smartArgs = {
   mode: 'smart' as const,
   query: 'bug',
@@ -29,10 +46,10 @@ const smartArgs = {
   githubAvailable: true,
   gitlabAvailable: true,
   linearAvailable: true,
-  clickUpAvailable: true,
+  jiraAvailable: false,
+  jiraSiteId: null,
   mrStateFilter: 'opened' as const,
-  linearWorkspaceId: null,
-  clickupWorkspaceId: null
+  linearWorkspaceId: null
 }
 
 describe('fanOutSmartSearch', () => {
@@ -40,17 +57,21 @@ describe('fanOutSmartSearch', () => {
     const calls: Call[] = []
     const client = fakeClient(
       {
-        'github.listWorkItems': { items: [{ id: 'g1', type: 'issue', number: 1, title: 'A' }] },
-        'gitlab.listWorkItems': { items: [{ id: 'gl1', type: 'mr', number: 2, title: 'B' }] },
-        'linear.searchIssues': { items: [{ id: 'l1', identifier: 'ENG-1', title: 'C' }] },
-        'clickup.searchTasks': [{ id: 'cu1', name: 'D' }],
+        'github.listWorkItems': {
+          items: [{ ...workItem, id: 'g1', type: 'issue', number: 1, title: 'A' }]
+        },
+        'gitlab.listWorkItems': {
+          items: [{ ...workItem, id: 'gl1', type: 'mr', number: 2, title: 'B' }]
+        },
+        'linear.searchIssues': {
+          items: [{ ...linearIssue, id: 'l1', identifier: 'ENG-1', title: 'C' }]
+        },
         'repo.searchRefs': { refDetails: [{ refName: 'main', localBranchName: 'main' }] }
       },
       calls
     )
     const result = await fanOutSmartSearch({ client, ...smartArgs })
     expect(calls.map((c) => c.method).sort()).toEqual([
-      'clickup.searchTasks',
       'github.listWorkItems',
       'gitlab.listWorkItems',
       'linear.searchIssues',
@@ -59,7 +80,6 @@ describe('fanOutSmartSearch', () => {
     expect(result.githubItems[0]).toMatchObject({ number: 1, repoId: 'repo-1' })
     expect(result.gitlabItems[0]).toMatchObject({ number: 2, repoId: 'repo-1' })
     expect(result.linearIssues[0]).toMatchObject({ identifier: 'ENG-1' })
-    expect(result.clickUpTasks[0]).toMatchObject({ id: 'cu1' })
     expect(result.branches).toEqual([{ refName: 'main', localBranchName: 'main' }])
     expect(result.error).toBe('')
   })
@@ -69,9 +89,10 @@ describe('fanOutSmartSearch', () => {
     const client = fakeClient(
       {
         'github.listWorkItems': new Error('gh down'),
-        'gitlab.listWorkItems': { items: [{ id: 'gl1', type: 'mr', number: 2, title: 'B' }] },
+        'gitlab.listWorkItems': {
+          items: [{ ...workItem, id: 'gl1', type: 'mr', number: 2, title: 'B' }]
+        },
         'linear.searchIssues': { items: [] },
-        'clickup.searchTasks': [],
         'repo.searchRefs': { refDetails: [] }
       },
       calls
@@ -112,7 +133,6 @@ describe('fanOutSmartSearch', () => {
       githubItems: [],
       gitlabItems: [],
       linearIssues: [],
-      clickUpTasks: [],
       branches: []
     })
   })

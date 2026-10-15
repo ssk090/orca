@@ -1,5 +1,15 @@
-import { splitWorktreeId, splitWorktreeIdForFilesystem } from '../../shared/worktree/id'
+import { preserveFolderUpgradeWorktreePath } from '../folder-upgrade-worktree-path'
+import {
+  splitWorktreeId,
+  splitWorktreeIdForFilesystem,
+  worktreeIdComparisonKey
+} from '../../shared/worktree/id'
 import { getRepoExecutionHostId, type ExecutionHostId } from '../../shared/execution-host'
+import {
+  readAllWorktreeMetaForHost,
+  readWorktreeMetaForHost,
+  writeWorktreeMetaForHost
+} from '../persistence/host-qualified-worktree-meta'
 import { isFolderRepo } from '../../shared/repo-kind'
 import { projectResolvedWorktreeLineage } from '../../shared/resolved-worktree-lineage'
 import { withTimeout } from '../../shared/promise-timeout-fallback'
@@ -8,12 +18,31 @@ import type { WorktreeLineage } from '../../shared/worktree/lineage-types'
 import type { Repo } from '../../shared/repo-types'
 import type { WorktreeMeta } from '../../shared/worktree/meta-types'
 import type { ProjectExecutionRuntimeResolution } from '../../shared/project-execution-runtime'
-import type { Store } from '../persistence'
+import type { RuntimeStore } from './runtime-store-contract'
+
 import { areWorktreePathsEqual, mergeWorktree } from '../ipc/worktree-logic'
 import { pruneLineageForMissingRepoWorktrees } from '../worktree-lineage-pruning'
 import { getRepoOwnedWorktreeMeta } from '../worktree-metadata-ownership'
 import { resolveLocalProjectRuntimesForRepos } from '../project-runtime-git-options'
 import type { RuntimeWorktreeScanResult } from './repo-worktree-resolution-scan'
+
+type RepoWorktreeRowStore = Pick<
+  RuntimeStore,
+  | 'getRepos'
+  | 'getRepo'
+  | 'getProjects'
+  | 'getSettings'
+  | 'getAllWorktreeMeta'
+  | 'getAllWorktreeMetaForHost'
+  | 'getWorktreeMeta'
+  | 'getWorktreeMetaForHost'
+  | 'setWorktreeMeta'
+  | 'setWorktreeMetaForHost'
+  | 'getAllWorktreeLineage'
+  | 'getAllWorkspaceLineage'
+  | 'removeWorktreeLineage'
+  | 'removeWorkspaceLineage'
+>
 
 /**
  * Per-repo budget for one resolution pass. Why: mobile startup shares this path, so one slow repo
@@ -37,7 +66,7 @@ export type RepoWorktreeRow = Worktree & {
 }
 
 export type RepoWorktreeRowDeps = {
-  store: Store
+  store: RepoWorktreeRowStore
   /** The cache-aware per-repo scan. Injected so this module never owns scan-cache state. */
   scanRepo: (
     repo: Repo,
@@ -52,13 +81,15 @@ export type RepoWorktreeRowDeps = {
  * it last knew instead of an empty catalog. `worktrees:list` does the same for disconnected SSH.
  */
 export function listStoredWorktreeRowsForRepo(
-  store: Store,
+  store: RepoWorktreeRowStore,
   repo: Repo,
   repoOwnerCount = store.getRepos().filter((candidate) => candidate.id === repo.id).length
 ): GitWorktreeInfo[] {
   const expectedHostId = getRepoExecutionHostId(repo)
   const byWorktreeId = new Map<string, GitWorktreeInfo>()
-  for (const [worktreeId, meta] of Object.entries(store.getAllWorktreeMeta())) {
+  for (const [worktreeId, meta] of Object.entries(
+    readAllWorktreeMetaForHost(store, expectedHostId)
+  )) {
     const parsed = splitWorktreeId(worktreeId)
     if (!parsed || parsed.repoId !== repo.id) {
       continue
@@ -121,7 +152,7 @@ export async function resolveRepoWorktreeRows(
     RESOLVED_WORKTREE_REPO_TIMEOUT_MS,
     null
   )) ?? { ok: false, worktrees: listStoredWorktreeRowsForRepo(store, repo, repoOwnerCount) }
-  const gitWorktrees = scan.worktrees
+  const gitWorktrees = preserveFolderUpgradeWorktreePath(repo, scan.worktrees)
   if (scan.ok) {
     pruneLineageForMissingRepoWorktrees(store, repo, gitWorktrees)
   }
@@ -130,15 +161,18 @@ export async function resolveRepoWorktreeRows(
     const worktreeId = `${repo.id}::${gitWorktree.path}`
     // Why: lineage validation needs a durable instance ID even when the runtime sees a workspace before renderer discovery-stamp.
     const existingMeta = metaById[worktreeId]
-    const ownedExistingMeta = getRepoOwnedWorktreeMeta(repo, worktreeId, metaById, repoOwnerCount)
+    // A host-qualified row is exact; the locator-keyed one is only trustworthy when this repo owns it.
+    const ownedExistingMeta =
+      readWorktreeMetaForHost(store, worktreeId, expectedHostId) ??
+      getRepoOwnedWorktreeMeta(repo, worktreeId, metaById, repoOwnerCount)
     const meta = ownedExistingMeta?.instanceId
       ? ownedExistingMeta
       : ownedExistingMeta || (!existingMeta && repoOwnerCount === 1)
-        ? store.setWorktreeMeta(worktreeId, {})
+        ? writeWorktreeMetaForHost(store, worktreeId, expectedHostId, {})
         : undefined
     const merged = {
       ...mergeWorktree(repo.id, gitWorktree, meta, repo.displayName),
-      hostId: repoOwnerCount === 1 ? (existingMeta?.hostId ?? expectedHostId) : expectedHostId
+      hostId: meta?.hostId ?? expectedHostId
     }
     return {
       ...merged,
@@ -195,5 +229,18 @@ export async function resolveScopedWorktreeIdRow(
     resolveLocalProjectRuntimesForRepos(store, [repo])
   )
   const projected = projectResolvedWorktreeLineage(rows, store.getAllWorktreeLineage?.() ?? {})
-  return projected.find((worktree) => worktree.id === worktreeId) ?? null
+  const exact = projected.find((worktree) => worktree.id === worktreeId)
+  if (exact) {
+    return exact
+  }
+  // Why (#16243): the scan can spell this id's path differently — the divergence `path:` absorbs.
+  // One equivalent row may stand in; two is an ambiguity a scoped lookup must refuse, not guess.
+  const comparisonKey = worktreeIdComparisonKey(worktreeId)
+  if (comparisonKey === null) {
+    return null
+  }
+  const equivalent = projected.filter(
+    (worktree) => worktreeIdComparisonKey(worktree.id) === comparisonKey
+  )
+  return equivalent.length === 1 ? equivalent[0] : null
 }

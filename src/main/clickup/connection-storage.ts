@@ -8,7 +8,11 @@ import {
   readStoredCredentialToken,
   writeEncryptedCredential
 } from '../integration-credential-file'
-import type { ClickUpViewer, ClickUpWorkspace, ClickUpWorkspaceSelection } from '../../shared/clickup-types'
+import type {
+  ClickUpViewer,
+  ClickUpWorkspace,
+  ClickUpWorkspaceSelection
+} from '../../shared/clickup-types'
 export type ClickUpAccountFile = {
   version: 1
   viewer: ClickUpViewer

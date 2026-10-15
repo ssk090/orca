@@ -4,7 +4,11 @@ import {
   type RuntimeClickUpSettings
 } from '@/runtime/runtime-clickup-client'
 import type { ClickUpMutationResult, ClickUpTask } from '../../../../shared/clickup-types'
-import type { WorkspaceStatus, WorkspaceStatusDefinition, Worktree } from '../../../../shared/worktree/types'
+import type {
+  WorkspaceStatus,
+  WorkspaceStatusDefinition,
+  Worktree
+} from '../../../../shared/worktree/types'
 import type { WorkspaceBoardTaskStatusSyncResult } from './workspace-board-task-status-sync'
 
 export type WorkspaceBoardClickUpStatusSyncDependencies = {

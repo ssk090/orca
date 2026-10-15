@@ -10,6 +10,8 @@ import {
 } from 'react-native'
 import type { RpcClient } from '../transport/rpc-client'
 import type { SmartWorkspaceSourceRow as SourceRow } from '../../../src/shared/new-workspace/smart-workspace-source-results'
+import type { JiraSite, JiraSiteSelection } from '../../../src/shared/jira-types'
+import { isBlockingJiraUrlIntent } from '../../../src/shared/new-workspace/smart-workspace-source-results'
 import {
   MR_STATE_FILTER_OPTIONS,
   resolveAvailableSmartModes,
@@ -23,7 +25,6 @@ import {
   lookupGitHubItemByOwnerRepo,
   type PasteRepoCandidate
 } from '../tasks/smart-source-paste-intent'
-import { applySmartWorkspaceSourceSelection } from '../tasks/smart-workspace-source-selection'
 import { useSmartWorkspaceSource } from '../tasks/use-smart-workspace-source'
 import type { MobileComposerSource } from '../tasks/use-mobile-composer-source'
 import { colors } from '../theme/mobile-theme'
@@ -44,11 +45,14 @@ type Props = {
   repoId: string | null
   repos: readonly PasteRepoCandidate[]
   linearWorkspaceId?: string | null
-  clickupWorkspaceId?: string | null
+  jiraSiteId?: JiraSiteSelection | null
+  jiraSites?: readonly JiraSite[]
   sshReady: boolean
   onRepoChange: (repoId: string) => void
   onClose: () => void
 }
+
+const NO_JIRA_SITES: readonly JiraSite[] = []
 
 export function SmartWorkspaceSourceDrawer({
   visible,
@@ -58,7 +62,8 @@ export function SmartWorkspaceSourceDrawer({
   repoId,
   repos,
   linearWorkspaceId,
-  clickupWorkspaceId,
+  jiraSiteId,
+  jiraSites = NO_JIRA_SITES,
   sshReady,
   onRepoChange,
   onClose
@@ -103,9 +108,14 @@ export function SmartWorkspaceSourceDrawer({
   // Snap the chosen mode back into the available set if availability changes.
   const effectiveMode = availableModes.includes(mode) ? mode : (availableModes[0] ?? 'text')
 
-  // Tracker searches do not need a repo; hosted providers and branches do.
+  // A pasted Jira URL resolves to one issue without touching the repo, so it must
+  // stay reachable from Smart mode even when the repo is not connected.
+  const jiraUrlIntent =
+    availability.jiraAvailable && isBlockingJiraUrlIntent(effectiveMode, composer.name)
+  // Linear and Jira search without a repo; every other provider/branch search
+  // needs a connected repo-backed target.
   const searchEnabled =
-    visible && (effectiveMode === 'linear' || effectiveMode === 'clickup' || sshReady)
+    visible && (effectiveMode === 'linear' || effectiveMode === 'jira' || jiraUrlIntent || sshReady)
 
   const {
     rows,
@@ -124,15 +134,38 @@ export function SmartWorkspaceSourceDrawer({
     githubAvailable: availability.githubAvailable,
     gitlabAvailable: availability.gitlabAvailable,
     linearAvailable: availability.linearAvailable,
-    clickUpAvailable: availability.clickUpAvailable,
+    jiraAvailable: availability.jiraAvailable,
     mrStateFilter,
     linearWorkspaceId,
-    clickupWorkspaceId,
+    jiraSiteId,
+    jiraSites,
     repos
   })
 
   function handleSelectRow(row: SourceRow): void {
-    applySmartWorkspaceSourceSelection(row, composer)
+    switch (row.kind) {
+      case 'use-name':
+        composer.setName(row.name)
+        break
+      case 'create-branch':
+        composer.handleSmartCreateBranch(row.name)
+        break
+      case 'github':
+        composer.handleSmartGitHubItemSelect(row.item)
+        break
+      case 'gitlab':
+        composer.handleSmartGitLabItemSelect(row.item)
+        break
+      case 'branch':
+        composer.handleSmartBranchSelect(row.refName, row.localBranchName)
+        break
+      case 'linear':
+        composer.handleSmartLinearIssueSelect(row.issue)
+        break
+      case 'jira':
+        composer.handleSmartJiraIssueSelect(row.issue)
+        break
+    }
     onClose()
   }
 
@@ -211,7 +244,11 @@ export function SmartWorkspaceSourceDrawer({
             </View>
           ) : null}
 
-          {!sshReady && effectiveMode !== 'text' && effectiveMode !== 'linear' ? (
+          {!sshReady &&
+          effectiveMode !== 'text' &&
+          effectiveMode !== 'linear' &&
+          effectiveMode !== 'jira' &&
+          !jiraUrlIntent ? (
             <Text style={styles.notice}>Connect the repository to search sources.</Text>
           ) : needsGitHubRemote ? (
             <Text style={styles.notice}>

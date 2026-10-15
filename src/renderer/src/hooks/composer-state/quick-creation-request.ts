@@ -18,6 +18,7 @@ export type QuickCreationRequestInput = {
   workspaceName: string
   nameWasGenerated: boolean
   displayName: string | undefined
+  displayNameKind?: 'generated' | 'user'
   selectedRepoIsGit: boolean
   baseBranch: string | undefined
   compareBaseRef: string | undefined
@@ -29,25 +30,34 @@ export type QuickCreationRequestInput = {
   linkedPR: number | null
   pushTarget: GitPushTarget | undefined
   agent: TuiAgent | null
+  agentLaunchRoute?: WorktreeCreationRequest['agentLaunchRoute']
   linkedLinearIssue: string | undefined
   linkedLinearIssueWorkspaceId: string | undefined
   linkedLinearIssueOrganizationUrlKey: string | undefined
   linkedClickUpTaskId: string | undefined
   linkedClickUpWorkspaceId: string | undefined
   branchNameOverride: string | undefined
+  parentWorktreeId: string | null
   workspaceStatus: WorktreeCreationRequest['workspaceStatus']
   linkedGitLabMR: number | null
   linkedGitLabIssue: number | null
   includeGitLabLinks: boolean
   startup: WorktreeCreationRequest['startup']
-  issueCommand: WorktreeCreationRequest['issueCommand']
+  issueCommand?: WorktreeCreationRequest['issueCommand']
+  hookPreparation?: WorktreeCreationRequest['hookPreparation']
   pendingFirstAgentMessageRename: boolean
   note: string
   startupPlan: AgentStartupPlan | null
   quickPrompt: string
   launchDraftPrompt: string | null | undefined
+  promptDelivery: 'draft' | 'auto-submit'
   quickTelemetry: AgentStartedTelemetry | null
   suppressTerminalFocusOnCompletion: boolean
+  setupOnly: boolean
+}
+
+export type QuickSubmitOptions = {
+  setupOnly?: boolean
 }
 
 export function buildQuickCreationRequest(
@@ -64,6 +74,7 @@ export function buildQuickCreationRequest(
     name: input.workspaceName,
     ...(input.nameWasGenerated ? { nameWasGenerated: true } : {}),
     ...(input.displayName ? { displayName: input.displayName } : {}),
+    ...(input.displayNameKind ? { displayNameKind: input.displayNameKind } : {}),
     ...(input.selectedRepoIsGit && input.baseBranch ? { baseBranch: input.baseBranch } : {}),
     ...(input.selectedRepoIsGit && input.compareBaseRef
       ? { compareBaseRef: input.compareBaseRef }
@@ -82,6 +93,7 @@ export function buildQuickCreationRequest(
     ...(input.linkedPR != null ? { linkedPR: input.linkedPR } : {}),
     ...(input.pushTarget ? { pushTarget: input.pushTarget } : {}),
     agent: input.agent,
+    ...(input.agentLaunchRoute ? { agentLaunchRoute: input.agentLaunchRoute } : {}),
     ...(input.linkedLinearIssue ? { linkedLinearIssue: input.linkedLinearIssue } : {}),
     ...(input.linkedLinearIssueWorkspaceId !== undefined
       ? { linkedLinearIssueWorkspaceId: input.linkedLinearIssueWorkspaceId }
@@ -94,6 +106,7 @@ export function buildQuickCreationRequest(
       ? { linkedClickUpWorkspaceId: input.linkedClickUpWorkspaceId }
       : {}),
     ...(input.branchNameOverride ? { branchNameOverride: input.branchNameOverride } : {}),
+    ...(input.parentWorktreeId ? { parentWorktreeId: input.parentWorktreeId } : {}),
     ...(input.workspaceStatus ? { workspaceStatus: input.workspaceStatus } : {}),
     ...(input.includeGitLabLinks && input.linkedGitLabMR != null
       ? { linkedGitLabMR: input.linkedGitLabMR }
@@ -102,13 +115,16 @@ export function buildQuickCreationRequest(
       ? { linkedGitLabIssue: input.linkedGitLabIssue }
       : {}),
     ...(input.startup ? { startup: input.startup } : {}),
+    ...(input.hookPreparation ? { hookPreparation: input.hookPreparation } : {}),
     ...(input.issueCommand ? { issueCommand: input.issueCommand } : {}),
     pendingFirstAgentMessageRename: input.pendingFirstAgentMessageRename,
     note: input.note,
     startupPlan: input.startupPlan,
     quickPrompt: input.quickPrompt,
     ...(input.launchDraftPrompt ? { launchDraftPrompt: input.launchDraftPrompt } : {}),
+    promptDelivery: input.promptDelivery,
     quickTelemetry: input.quickTelemetry,
-    ...(input.suppressTerminalFocusOnCompletion ? { suppressTerminalFocusOnCompletion: true } : {})
+    ...(input.suppressTerminalFocusOnCompletion ? { suppressTerminalFocusOnCompletion: true } : {}),
+    ...(input.agent === null ? { setupOnly: input.setupOnly } : {})
   }
 }

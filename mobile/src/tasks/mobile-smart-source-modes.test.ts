@@ -14,7 +14,7 @@ const fullyAvailable = {
   githubAvailable: true,
   gitlabAvailable: true,
   linearAvailable: true,
-  clickUpAvailable: true
+  jiraAvailable: true
 }
 
 describe('resolveAvailableSmartModes', () => {
@@ -23,7 +23,7 @@ describe('resolveAvailableSmartModes', () => {
       'smart',
       'github',
       'linear',
-      'clickup',
+      'jira',
       'gitlab',
       'branches',
       'text'
@@ -48,13 +48,20 @@ describe('resolveAvailableSmartModes', () => {
         githubAvailable: false,
         gitlabAvailable: false
       })
-    ).toEqual(['smart', 'linear', 'clickup', 'branches', 'text'])
+    ).toEqual(['smart', 'linear', 'jira', 'branches', 'text'])
     expect(resolveAvailableSmartModes({ ...fullyAvailable, hasRepo: false })).toEqual([
       'smart',
       'linear',
-      'clickup',
+      'jira',
       'text'
     ])
+  })
+
+  it('keeps the Jira tab repo-independent but hides it when Jira is disconnected', () => {
+    expect(resolveAvailableSmartModes({ ...fullyAvailable, hasRepo: false })).toContain('jira')
+    expect(resolveAvailableSmartModes({ ...fullyAvailable, jiraAvailable: false })).not.toContain(
+      'jira'
+    )
   })
 })
 

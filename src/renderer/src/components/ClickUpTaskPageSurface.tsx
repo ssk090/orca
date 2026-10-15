@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowRight, ExternalLink, Loader2, Plus, RefreshCw, Search, X } from 'lucide-react'
-import type { ClickUpTask, ClickUpTaskFilter, ClickUpWorkspaceSelection } from '../../../shared/clickup-types'
+import type {
+  ClickUpTask,
+  ClickUpTaskFilter,
+  ClickUpWorkspaceSelection
+} from '../../../shared/clickup-types'
 import type { TaskSourceContext } from '../../../shared/task-source-context'
 import type { LinkedWorkItemSummary } from '@/lib/new-workspace'
 import { getLinkedWorkItemSuggestedName } from '../../../shared/workspace-name'

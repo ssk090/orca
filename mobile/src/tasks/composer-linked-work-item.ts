@@ -1,16 +1,19 @@
-import type { ClickUpTask } from '../../../src/shared/clickup-types'
 import type { GitHubWorkItem } from '../../../src/shared/github/work-item-types'
 import type { GitLabWorkItem } from '../../../src/shared/gitlab-types'
 import type { LinearIssue } from '../../../src/shared/linear/issue-types'
 import { getLinearIssueWorkspaceName } from '../../../src/shared/workspace-name'
+import type { JiraIssue } from '../../../src/shared/jira-types'
 import {
   buildGitHubWorkspaceSource,
   buildGitLabWorkspaceSource,
+  buildJiraWorkspaceSource,
   buildLinearWorkspaceSource,
   buildWorkspaceSourceSelection,
   getWorkspaceSourceName,
   shouldApplyWorkspaceSourceAutoName
 } from '../../../src/shared/new-workspace/workspace-source'
+
+type JiraIssueSource = Pick<JiraIssue, 'key' | 'title' | 'url'>
 import { resolveComposerBranchPick as resolveSharedComposerBranchPick } from '../../../src/shared/composer-branch-selection'
 import type {
   MobileComposerCreateSelection,
@@ -48,23 +51,14 @@ export function buildLinearLinkedWorkItem(issue: {
   return buildLinearWorkspaceSource(issue)
 }
 
-export function buildClickUpLinkedWorkItem(task: ClickUpTask): MobileLinkedWorkItem {
-  const reference = task.customId ?? task.id
-  return {
-    provider: 'clickup',
-    type: 'issue',
-    number: 0,
-    title: `${reference} ${task.name}`,
-    url: task.url,
-    clickupIdentifier: task.id,
-    clickupWorkspaceId: task.workspaceId
-  }
-}
-
 // Faithful port of desktop applyLinkedWorkItem's name gate: the derived name
 // replaces the current field only when it's empty, still the last auto-name, or
 // a lookup query — never a name the user deliberately typed.
-export function shouldApplyAutoName(args: { currentName: string; lastAutoName: string }): boolean {
+export function shouldApplyAutoName(args: {
+  currentName: string
+  lastAutoName: string
+  lookupTextIsQuery?: boolean
+}): boolean {
   return shouldApplyWorkspaceSourceAutoName(args)
 }
 
@@ -72,7 +66,7 @@ export function resolveWorkItemAutoName(item: {
   type: 'issue' | 'pr' | 'mr'
   number: number
   title: string
-  provider: 'github' | 'gitlab' | 'linear' | 'clickup'
+  provider: 'github' | 'gitlab' | 'linear'
   linearIdentifier?: string
 }): string {
   return getWorkspaceSourceName({ ...item, url: '' }).seedName
@@ -82,6 +76,14 @@ export function resolveLinearAutoName(issue: { identifier: string; title: string
   return getLinearIssueWorkspaceName(issue)
 }
 
+export function buildJiraLinkedWorkItem(issue: JiraIssueSource): MobileLinkedWorkItem {
+  return buildJiraWorkspaceSource(issue)
+}
+
+export function resolveJiraAutoName(issue: JiraIssueSource): string {
+  return getWorkspaceSourceName(buildJiraWorkspaceSource(issue)).seedName
+}
+
 // Derives the pill descriptor from the linked item (or a plain branch base),
 // mirroring desktop's smartNameSelection memo.
 export function buildSmartNameSelection(args: {
@@ -89,13 +91,6 @@ export function buildSmartNameSelection(args: {
   baseBranch: string | undefined
 }): SmartNameSelection | null {
   return buildWorkspaceSourceSelection(args) as SmartNameSelection | null
-}
-
-export function buildSmartNameSelectionFor(
-  linkedWorkItem: MobileLinkedWorkItem | null,
-  baseBranch: string | undefined
-): SmartNameSelection | null {
-  return buildSmartNameSelection({ linkedWorkItem, baseBranch })
 }
 
 // Derives the create-time selection from composer state: a linked work item wins
@@ -173,4 +168,4 @@ export function resolveComposerBranchPick(args: {
   }
 }
 
-export type { ClickUpTask, GitHubWorkItem, GitLabWorkItem, LinearIssue }
+export type { GitHubWorkItem, GitLabWorkItem, LinearIssue }

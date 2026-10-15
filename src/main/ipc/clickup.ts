@@ -13,7 +13,12 @@ import {
   updateTask
 } from '../clickup/tasks'
 import { _resetPreflightCache } from './preflight'
-import type { ClickUpCreateTaskArgs, ClickUpTaskFilter, ClickUpTaskUpdate, ClickUpWorkspaceSelection } from '../../shared/clickup-types'
+import type {
+  ClickUpCreateTaskArgs,
+  ClickUpTaskFilter,
+  ClickUpTaskUpdate,
+  ClickUpWorkspaceSelection
+} from '../../shared/clickup-types'
 const VALID_FILTERS = new Set<ClickUpTaskFilter>([
   'assigned',
   'created',

@@ -14,13 +14,13 @@ import {
 } from './workspace-space-scan-control'
 import {
   scanWorkspaceSpaceRepo,
+  summarizeWorkspaceSpaceRows,
   type WorkspaceSpaceAnalyzeOptions,
   type WorkspaceSpaceScanLimiters
 } from './workspace-space-repo-scan'
 
 const REPO_SCAN_CONCURRENCY = 2
 const LOCAL_WORKTREE_SCAN_CONCURRENCY = 1
-const REMOTE_FALLBACK_SCAN_CONCURRENCY = 2
 const DU_TIMEOUT_MS = 120_000
 const DU_MAX_BUFFER_BYTES = 16 * 1024 * 1024
 
@@ -128,11 +128,7 @@ export async function analyzeWorkspaceSpace(
   }
   options.onProgress?.({ ...progress })
   const limiters: WorkspaceSpaceScanLimiters = {
-    localWorktree: createWorkspaceSpaceScanLimiter(LOCAL_WORKTREE_SCAN_CONCURRENCY, options.signal),
-    remoteFallbackTraversal: createWorkspaceSpaceScanLimiter(
-      REMOTE_FALLBACK_SCAN_CONCURRENCY,
-      options.signal
-    )
+    localWorktree: createWorkspaceSpaceScanLimiter(LOCAL_WORKTREE_SCAN_CONCURRENCY, options.signal)
   }
   const repoResults = await mapWithConcurrency(reposToScan, REPO_SCAN_CONCURRENCY, (repo) =>
     scanWorkspaceSpaceRepo({
@@ -152,15 +148,20 @@ export async function analyzeWorkspaceSpace(
     .flatMap((result) => result.worktrees)
     .sort((a, b) => b.sizeBytes - a.sizeBytes || a.displayName.localeCompare(b.displayName))
   throwIfWorkspaceSpaceScanAborted(options.signal)
+  const summary = summarizeWorkspaceSpaceRows(worktrees)
+  let unavailableRepoCount = 0
+  for (const repo of repos) {
+    if (repo.error !== null) {
+      unavailableRepoCount += 1
+    }
+  }
   return {
     scannedAt,
-    totalSizeBytes: worktrees.reduce((sum, row) => sum + row.sizeBytes, 0),
-    reclaimableBytes: worktrees.reduce((sum, row) => sum + row.reclaimableBytes, 0),
+    totalSizeBytes: summary.totalSizeBytes,
+    reclaimableBytes: summary.reclaimableBytes,
     worktreeCount: worktrees.length,
-    scannedWorktreeCount: worktrees.filter((row) => row.status === 'ok').length,
-    unavailableWorktreeCount:
-      worktrees.filter((row) => row.status !== 'ok').length +
-      repos.filter((repo) => repo.error !== null).length,
+    scannedWorktreeCount: summary.scannedWorktreeCount,
+    unavailableWorktreeCount: summary.unavailableWorktreeCount + unavailableRepoCount,
     repos,
     worktrees
   }

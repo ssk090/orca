@@ -1,6 +1,6 @@
 import Svg, { Path } from 'react-native-svg'
 
-export type TaskProviderLogoKind = 'github' | 'gitlab' | 'linear' | 'clickup'
+export type TaskProviderLogoKind = 'github' | 'gitlab' | 'linear' | 'jira'
 
 type Props = {
   provider: TaskProviderLogoKind
@@ -46,21 +46,19 @@ export function TaskProviderLogo({ provider, size = 16, color }: Props) {
     )
   }
 
-  if (provider === 'clickup') {
+  if (provider === 'jira') {
     return (
       <Svg
         width={size}
         height={size}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke={color}
-        strokeWidth={3}
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        viewBox="0 -30.632388516510233 255.324 285.95638851651023"
+        fill={color}
       >
-        {/* Why: ClickUp has no lucide glyph; reuse the canonical desktop mark. */}
-        <Path d="m5 8 7-5 7 5" />
-        <Path d="M6 13.5c1.4 4.8 9.7 5.4 12 0" />
+        {/* Why: flattened Jira product mark, matching the desktop JiraIcon so the
+        provider row stays monochrome instead of rendering as a branded tile. */}
+        <Path d="M244.658 0H121.707a55.502 55.502 0 0 0 55.502 55.502h22.649V77.37c.02 30.625 24.841 55.447 55.466 55.467V10.666C255.324 4.777 250.55 0 244.658 0z" />
+        <Path d="M183.822 61.262H60.872c.019 30.625 24.84 55.447 55.466 55.467h22.649v21.938c.039 30.625 24.877 55.43 55.502 55.43V71.93c0-5.891-4.776-10.667-10.667-10.667z" />
+        <Path d="M122.951 122.489H0c0 30.653 24.85 55.502 55.502 55.502h22.72v21.867c.02 30.597 24.798 55.408 55.396 55.466V133.156c0-5.891-4.776-10.667-10.667-10.667z" />
       </Svg>
     )
   }

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { getActiveRuntimeTarget } from '@/runtime/runtime-rpc-client'
+import { getClickUpRuntimeTarget } from '@/runtime/runtime-clickup-client'
 import { translate } from '@/i18n/i18n'
 
 export function ClickUpApiTokenDialog({
@@ -69,7 +69,7 @@ export function ClickUpApiTokenDialog({
     onConnected?.()
   }
 
-  const remote = getActiveRuntimeTarget(settings).kind === 'environment'
+  const remote = getClickUpRuntimeTarget(settings).kind === 'environment'
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
