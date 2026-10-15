@@ -18,6 +18,14 @@ export type ClickUpWorkspace = {
 // the whole union to string, matching JiraSiteSelection.
 export type ClickUpWorkspaceSelection = (string & {}) | 'all'
 
+// Main-process pacing state for the shared ClickUp token, shown in the UI.
+export type ClickUpRateLimitState = {
+  // Epoch ms until which requests are paused, or null when traffic flows.
+  pausedUntil: number | null
+  // True when the pause follows a 429 rather than proactive pacing.
+  rateLimited: boolean
+}
+
 export type ClickUpConnectionStatus = {
   connected: boolean
   viewer: ClickUpViewer | null

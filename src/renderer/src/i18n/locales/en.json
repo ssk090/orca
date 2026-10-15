@@ -18157,6 +18157,10 @@
           "cancel": "Cancel",
           "creating": "Creating…",
           "submit": "Create task"
+        },
+        "rateLimit": {
+          "limited": "ClickUp rate limit reached, retrying in {{seconds}}s",
+          "paced": "Pacing ClickUp requests to stay under the rate limit, resuming in {{seconds}}s"
         }
       },
       "ClickUpTaskDetailSheet": {

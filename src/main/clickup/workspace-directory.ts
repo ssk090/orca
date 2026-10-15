@@ -6,6 +6,7 @@ import type {
 } from '../../shared/clickup-types'
 import {
   clickUpRequest,
+  onClickUpDisconnect,
   requireClickUpClient,
   requireClickUpClients,
   type ClickUpClientForWorkspace
@@ -43,7 +44,36 @@ function normalizeList(
   }
 }
 
-async function listsForWorkspace(client: ClickUpClientForWorkspace): Promise<ClickUpList[]> {
+// Why: the List hierarchy is only read by the create-task dialog and rarely
+// changes, while walking it costs one request per Space; caching it per
+// Workspace keeps reopening the dialog off ClickUp's per-minute budget.
+const LIST_HIERARCHY_TTL_MS = 5 * 60_000
+type CachedLists = { loadedAt: number; lists: ClickUpList[] }
+const listHierarchyCache = new Map<string, CachedLists>()
+const listHierarchyInFlight = new Map<string, Promise<ClickUpList[]>>()
+
+function listCacheKey(client: ClickUpClientForWorkspace): string {
+  // Why the token: reconnecting with another account must not reuse Lists the
+  // previous token could see.
+  return `${client.token}\u0000${client.workspace.id}`
+}
+
+function normalizeLists(
+  values: unknown[] | undefined,
+  client: ClickUpClientForWorkspace,
+  space: { id: string; name: string },
+  folder?: { id: string; name: string }
+): ClickUpList[] {
+  return (values ?? []).flatMap((value) => {
+    if (asRecord(value)?.archived === true) {
+      return []
+    }
+    const list = normalizeList(value, client, space, folder)
+    return list ? [list] : []
+  })
+}
+
+async function fetchListsForWorkspace(client: ClickUpClientForWorkspace): Promise<ClickUpList[]> {
   const spacesResponse = await clickUpRequest<{ spaces?: unknown[] }>(
     client,
     `/team/${encodeURIComponent(client.workspace.id)}/space?archived=false`
@@ -52,6 +82,9 @@ async function listsForWorkspace(client: ClickUpClientForWorkspace): Promise<Cli
     const space = normalizeClickUpLocation(value)
     return space ? [space] : []
   })
+  // Why two calls per Space: GET /space/{id}/folder already embeds each Folder's
+  // Lists, so only folderless Lists need their own request. Walking every Folder
+  // separately cost a request per Folder and tripped 429 in large Workspaces.
   const lists = await Promise.all(
     spaces.map(async (space) => {
       const [folderResponse, folderlessResponse] = await Promise.all([
@@ -64,36 +97,77 @@ async function listsForWorkspace(client: ClickUpClientForWorkspace): Promise<Cli
           `/space/${encodeURIComponent(space.id)}/list?archived=false`
         )
       ])
-      const folderLists = await Promise.all(
-        (folderResponse.folders ?? []).map(async (folderValue) => {
-          const folder = normalizeClickUpLocation(folderValue)
-          if (!folder) {
-            return []
-          }
-          const response = await clickUpRequest<{ lists?: unknown[] }>(
-            client,
-            `/folder/${encodeURIComponent(folder.id)}/list?archived=false`
-          )
-          return (response.lists ?? [])
-            .map((list) => normalizeList(list, client, space, folder))
-            .filter((list): list is ClickUpList => list !== null)
-        })
-      )
-      return [
-        ...(folderlessResponse.lists ?? [])
-          .map((list) => normalizeList(list, client, space))
-          .filter((list): list is ClickUpList => list !== null),
-        ...folderLists.flat()
-      ]
+      const folderLists = (folderResponse.folders ?? []).flatMap((folderValue) => {
+        const record = asRecord(folderValue)
+        const folder = normalizeClickUpLocation(folderValue)
+        if (!folder || record?.archived === true) {
+          return []
+        }
+        return normalizeLists(
+          Array.isArray(record?.lists) ? record.lists : [],
+          client,
+          space,
+          folder
+        )
+      })
+      return [...normalizeLists(folderlessResponse.lists, client, space), ...folderLists]
     })
   )
   return lists.flat()
 }
 
-export async function listClickUpLists(
-  workspaceId?: ClickUpWorkspaceSelection | null
+async function listsForWorkspace(client: ClickUpClientForWorkspace): Promise<ClickUpList[]> {
+  const key = listCacheKey(client)
+  const cached = listHierarchyCache.get(key)
+  if (cached && Date.now() - cached.loadedAt < LIST_HIERARCHY_TTL_MS) {
+    return cached.lists
+  }
+  const inFlight = listHierarchyInFlight.get(key)
+  if (inFlight) {
+    return inFlight
+  }
+  const request = fetchListsForWorkspace(client)
+    .then((lists) => {
+      listHierarchyCache.set(key, { loadedAt: Date.now(), lists })
+      return lists
+    })
+    .finally(() => listHierarchyInFlight.delete(key))
+  listHierarchyInFlight.set(key, request)
+  return request
+}
+
+export function clearClickUpListCache(): void {
+  listHierarchyCache.clear()
+}
+
+onClickUpDisconnect(clearClickUpListCache)
+
+async function getListForWorkspace(
+  client: ClickUpClientForWorkspace,
+  listId: string
 ): Promise<ClickUpList[]> {
-  const lists = await Promise.all(requireClickUpClients(workspaceId).map(listsForWorkspace))
+  const cached = listHierarchyCache.get(listCacheKey(client))
+  const hit = cached?.lists.find((list) => list.id === listId)
+  if (hit && Date.now() - (cached?.loadedAt ?? 0) < LIST_HIERARCHY_TTL_MS) {
+    return [hit]
+  }
+  const response = await clickUpRequest<unknown>(client, `/list/${encodeURIComponent(listId)}`)
+  const list = normalizeList(response, client)
+  return list ? [list] : []
+}
+
+// Lists the Workspace's Lists. With listId, reads just that List (one request)
+// for callers that only need its statuses, such as the task detail sheet.
+export async function listClickUpLists(
+  workspaceId?: ClickUpWorkspaceSelection | null,
+  listId?: string | null
+): Promise<ClickUpList[]> {
+  const clients = requireClickUpClients(workspaceId)
+  const lists = await Promise.all(
+    clients.map((client) =>
+      listId ? getListForWorkspace(client, listId) : listsForWorkspace(client)
+    )
+  )
   return lists
     .flat()
     .sort((a, b) =>

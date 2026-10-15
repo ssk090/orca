@@ -90,8 +90,11 @@ export class RuntimeClickUpCommands {
     return getTaskComments(taskId, workspaceId)
   }
 
-  clickUpListLists(workspaceId?: ClickUpWorkspaceSelection): ReturnType<typeof listLists> {
-    return listLists(workspaceId)
+  clickUpListLists(
+    workspaceId?: ClickUpWorkspaceSelection,
+    listId?: string
+  ): ReturnType<typeof listLists> {
+    return listLists(workspaceId, listId)
   }
 
   clickUpListMembers(workspaceId?: string): ReturnType<typeof listWorkspaceMembers> {

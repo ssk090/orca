@@ -1,6 +1,3 @@
-import { ensureElectronProxyFromEnvironment } from '../network/proxy-settings'
-import { getMainHttpClient } from '../network/http-client'
-import { asRecord } from './json-record'
 import type {
   ClickUpConnectionStatus,
   ClickUpViewer,
@@ -18,104 +15,15 @@ import {
   saveClickUpToken,
   writeClickUpAccount
 } from './connection-storage'
+import {
+  acquire,
+  ClickUpApiError,
+  release,
+  requestWithToken,
+  type ClickUpClientForWorkspace
+} from './request'
 
-const CLICKUP_API_BASE_URL = 'https://api.clickup.com/api/v2'
-const MAX_CONCURRENT = 4
-const CLICKUP_REQUEST_TIMEOUT_MS = 30_000
-
-let running = 0
-const queue: (() => void)[] = []
-
-export type ClickUpClientForWorkspace = {
-  workspace: ClickUpWorkspace
-  token: string
-}
-
-export class ClickUpApiError extends Error {
-  status: number | null
-
-  constructor(message: string, status: number | null = null) {
-    super(message)
-    this.name = 'ClickUpApiError'
-    this.status = status
-  }
-}
-
-async function acquire(): Promise<void> {
-  if (running < MAX_CONCURRENT) {
-    running += 1
-    return
-  }
-  await new Promise<void>((resolve) => {
-    queue.push(() => {
-      running += 1
-      resolve()
-    })
-  })
-}
-
-function release(): void {
-  running -= 1
-  queue.shift()?.()
-}
-
-async function readApiError(response: Response): Promise<string> {
-  try {
-    const data = asRecord(await response.json())
-    const message = data?.err ?? data?.error ?? data?.message
-    if (typeof message === 'string' && message.trim()) {
-      return message
-    }
-  } catch {
-    // Fall through to the HTTP status when ClickUp does not return JSON.
-  }
-  return response.statusText || `ClickUp request failed (${response.status})`
-}
-
-async function requestWithToken<T>(token: string, path: string, init?: RequestInit): Promise<T> {
-  const url = `${CLICKUP_API_BASE_URL}${path}`
-  const httpClient = getMainHttpClient()
-  const proxySession = httpClient.proxySession()
-  await ensureElectronProxyFromEnvironment({
-    ...(proxySession ? { proxySession } : {}),
-    probeUrl: url
-  }).catch(() => undefined)
-  const headers = new Headers(init?.headers)
-  headers.set('Accept', 'application/json')
-  headers.set('Authorization', token)
-  if (init?.body !== undefined) {
-    headers.set('Content-Type', 'application/json')
-  }
-  // Why the port: the desktop gets Electron's net.fetch, which follows Chromium
-  // proxy/session state; a host without Chromium gets Node's fetch instead.
-  const response = await httpClient.fetch(url, {
-    ...init,
-    headers,
-    signal: init?.signal ?? AbortSignal.timeout(CLICKUP_REQUEST_TIMEOUT_MS)
-  })
-  if (!response.ok) {
-    throw new ClickUpApiError(await readApiError(response), response.status)
-  }
-  if (response.status === 204) {
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: ClickUp answers 204 only for void mutations, whose callers type T as null or ignore it.
-    return null as T
-  }
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: callers name the ClickUp v2 response shape and read it through asRecord/asString guards.
-  return (await response.json()) as T
-}
-
-export async function clickUpRequest<T>(
-  client: ClickUpClientForWorkspace,
-  path: string,
-  init?: RequestInit
-): Promise<T> {
-  await acquire()
-  try {
-    return await requestWithToken<T>(client.token, path, init)
-  } finally {
-    release()
-  }
-}
+export { ClickUpApiError, clickUpRequest, type ClickUpClientForWorkspace } from './request'
 
 export function getClients(
   selection?: ClickUpWorkspaceSelection | null
@@ -223,8 +131,19 @@ export async function connect(
   }
 }
 
+// Why: response caches (List hierarchy, search pages) register here so a
+// disconnect drops data the old token could see.
+const disconnectListeners = new Set<() => void>()
+
+export function onClickUpDisconnect(listener: () => void): void {
+  disconnectListeners.add(listener)
+}
+
 export function disconnect(): void {
   deleteStoredClickUpConnection()
+  for (const listener of disconnectListeners) {
+    listener()
+  }
 }
 
 export function selectWorkspace(workspaceId: ClickUpWorkspaceSelection): ClickUpConnectionStatus {

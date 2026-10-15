@@ -72,7 +72,9 @@ export function ClickUpTaskDetailSheet({
     setError(null)
     let cancelled = false
     void Promise.all([
-      clickUpListLists(sourceContext, task.workspaceId),
+      // Why the listId: the sheet only needs this task's List statuses; walking
+      // the whole hierarchy costs a request per Space.
+      clickUpListLists(sourceContext, task.workspaceId, task.list.id),
       clickUpTaskComments(sourceContext, task.id, task.workspaceId)
     ])
       .then(([nextLists, nextComments]) => {

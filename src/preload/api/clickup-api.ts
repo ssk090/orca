@@ -6,6 +6,7 @@ import type {
   ClickUpCreateTaskResult,
   ClickUpList,
   ClickUpMutationResult,
+  ClickUpRateLimitState,
   ClickUpTag,
   ClickUpTask,
   ClickUpTaskFilter,
@@ -48,7 +49,12 @@ export type ClickUpApi = {
     workspaceId?: string
   }) => Promise<ClickUpCommentResult>
   taskComments: (args: { taskId: string; workspaceId?: string }) => Promise<ClickUpComment[]>
-  listLists: (args?: { workspaceId?: ClickUpWorkspaceSelection }) => Promise<ClickUpList[]>
+  listLists: (args?: {
+    workspaceId?: ClickUpWorkspaceSelection
+    listId?: string
+  }) => Promise<ClickUpList[]>
   listMembers: (args?: { workspaceId?: string }) => Promise<ClickUpUser[]>
   listTags: (args?: { workspaceId?: string }) => Promise<ClickUpTag[]>
+  rateLimitState: () => Promise<ClickUpRateLimitState>
+  onRateLimitStateChange: (callback: (state: ClickUpRateLimitState) => void) => () => void
 }

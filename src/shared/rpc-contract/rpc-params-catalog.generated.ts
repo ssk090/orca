@@ -134,6 +134,7 @@ import { BrowserOpenUrlParams, BrowserTabCreateParams } from './browser-tab-crea
 import {
   ClickUpConnect,
   ClickUpCreateTask,
+  ClickUpListLists,
   ClickUpListTasks,
   ClickUpSearchTasks,
   ClickUpSelectWorkspace,
@@ -820,7 +821,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'clickup.createTask': ClickUpCreateTask,
   'clickup.disconnect': null,
   'clickup.getTask': ClickUpTaskId,
-  'clickup.listLists': ClickUpWorkspaceSelection,
+  'clickup.listLists': ClickUpListLists,
   'clickup.listMembers': ClickUpWorkspaceSelection,
   'clickup.listTags': ClickUpWorkspaceSelection,
   'clickup.listTasks': ClickUpListTasks,

@@ -2,6 +2,7 @@ import { defineMethod } from '../core'
 import {
   ClickUpConnect,
   ClickUpCreateTask,
+  ClickUpListLists,
   ClickUpListTasks,
   ClickUpSearchTasks,
   ClickUpSelectWorkspace,
@@ -94,8 +95,9 @@ export const CLICKUP_METHODS = [
   defineMethod({
     name: 'clickup.listLists',
     permission: 'workspace',
-    params: ClickUpWorkspaceSelection,
-    handler: async (params, { runtime }) => runtime.clickUpListLists(params?.workspaceId)
+    params: ClickUpListLists,
+    handler: async (params, { runtime }) =>
+      runtime.clickUpListLists(params?.workspaceId, params?.listId)
   }),
   defineMethod({
     name: 'clickup.listMembers',

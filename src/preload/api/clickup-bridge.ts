@@ -1,4 +1,5 @@
 import { ipcRenderer } from 'electron'
+import type { ClickUpRateLimitState } from '../../shared/clickup-types'
 import type { PreloadApi } from '../api-types'
 
 export const clickUpApi = {
@@ -30,5 +31,16 @@ export const clickUpApi = {
 
   listMembers: (args) => ipcRenderer.invoke('clickup:listMembers', args),
 
-  listTags: (args) => ipcRenderer.invoke('clickup:listTags', args)
+  listTags: (args) => ipcRenderer.invoke('clickup:listTags', args),
+
+  rateLimitState: () => ipcRenderer.invoke('clickup:rateLimitState'),
+
+  onRateLimitStateChange: (callback) => {
+    const listener = (_event: Electron.IpcRendererEvent, state: ClickUpRateLimitState): void =>
+      callback(state)
+    ipcRenderer.on('clickup:rateLimitStateChanged', listener)
+    return () => {
+      ipcRenderer.removeListener('clickup:rateLimitStateChanged', listener)
+    }
+  }
 } satisfies PreloadApi['clickup']

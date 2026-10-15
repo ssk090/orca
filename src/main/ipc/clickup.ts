@@ -1,4 +1,5 @@
-import { ipcMain } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
+import { getClickUpRateLimitState, onClickUpRateLimitStateChange } from '../clickup/rate-limit'
 import { connect, disconnect, getStatus, selectWorkspace, testConnection } from '../clickup/client'
 import {
   addTaskComment,
@@ -105,6 +106,17 @@ function normalizeTaskUpdate(value: unknown): ClickUpTaskUpdate | null {
 }
 
 export function registerClickUpHandlers(): void {
+  // Why push: a paused ClickUp queue looks like a hang; every window shows the
+  // countdown instead of a spinner that never explains itself.
+  onClickUpRateLimitStateChange((state) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) {
+        window.webContents.send('clickup:rateLimitStateChanged', state)
+      }
+    }
+  })
+  ipcMain.handle('clickup:rateLimitState', () => getClickUpRateLimitState())
+
   ipcMain.handle('clickup:connect', async (_event, args: { apiToken: string }) => {
     if (typeof args?.apiToken !== 'string' || !args.apiToken.trim()) {
       return { ok: false, error: 'Personal API token is required.' }
@@ -251,8 +263,8 @@ export function registerClickUpHandlers(): void {
 
   ipcMain.handle(
     'clickup:listLists',
-    async (_event, args?: { workspaceId?: ClickUpWorkspaceSelection }) =>
-      listLists(workspaceSelection(args?.workspaceId))
+    async (_event, args?: { workspaceId?: ClickUpWorkspaceSelection; listId?: string }) =>
+      listLists(workspaceSelection(args?.workspaceId), optionalString(args?.listId))
   )
 
   ipcMain.handle('clickup:listMembers', async (_event, args?: { workspaceId?: string }) =>

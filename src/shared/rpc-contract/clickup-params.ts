@@ -19,6 +19,14 @@ export const ClickUpWorkspaceSelection = z
   })
   .optional()
 
+// listId narrows the read to one List, for callers that only need its statuses.
+export const ClickUpListLists = z
+  .object({
+    workspaceId: OptionalString,
+    listId: OptionalString
+  })
+  .optional()
+
 export const ClickUpSearchTasks = z.object({
   query: requiredString('Search query is required'),
   limit: OptionalFiniteNumber,

@@ -15,6 +15,7 @@ import { ClickUpIcon } from '@/components/icons/ClickUpIcon'
 import { ClickUpApiTokenDialog } from '@/components/clickup-api-token-dialog'
 import { ClickUpCreateTaskDialog } from '@/components/clickup-create-task-dialog'
 import { ClickUpTaskDetailSheet } from '@/components/ClickUpTaskDetailSheet'
+import { ClickUpRateLimitNotice } from '@/components/clickup-rate-limit-notice'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -104,9 +105,12 @@ export function ClickUpTaskPageSurface({
     }
   }, [appliedQuery, filter, listTasks, refreshNonce, searchTasks, sourceContext, status.connected])
 
+  // Why: search results arrive ranked (exact id, then name prefix, then
+  // substring); re-sorting by update time would bury the exact match.
   const sortedTasks = useMemo(
-    () => [...tasks].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
-    [tasks]
+    () =>
+      appliedQuery ? tasks : [...tasks].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    [appliedQuery, tasks]
   )
 
   const handleWorkspaceChange = useCallback(
@@ -286,6 +290,7 @@ export function ClickUpTaskPageSurface({
           <span />
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto scrollbar-sleek">
+          <ClickUpRateLimitNotice />
           {error ? (
             <div className="border-b border-border px-4 py-4 text-sm text-destructive">{error}</div>
           ) : null}

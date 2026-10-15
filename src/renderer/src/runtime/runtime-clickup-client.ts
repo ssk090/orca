@@ -189,10 +189,14 @@ export async function clickUpTaskComments(
 
 export async function clickUpListLists(
   settings: RuntimeClickUpSettings,
-  workspaceId?: ClickUpWorkspaceSelection | null
+  workspaceId?: ClickUpWorkspaceSelection | null,
+  listId?: string | null
 ): Promise<ClickUpList[]> {
   const target = targetFor(settings)
-  const params = workspaceId ? { workspaceId } : undefined
+  const params =
+    workspaceId || listId
+      ? { ...(workspaceId ? { workspaceId } : {}), ...(listId ? { listId } : {}) }
+      : undefined
   return target.kind === 'environment'
     ? callRuntimeRpc(target, 'clickup.listLists', params, { timeoutMs: 60_000 })
     : withLocalTimeout(window.api.clickup.listLists(params), 60_000)

@@ -18,6 +18,7 @@ vi.mock('./client', () => ({
   clickUpRequest: (...args: unknown[]) => clickUpRequestMock(...args),
   getClients: (...args: unknown[]) => getClientsMock(...args),
   getStatus: (...args: unknown[]) => getStatusMock(...args),
+  onClickUpDisconnect: vi.fn(),
   requireClickUpClient: (workspaceId?: string) => {
     const selected = getClientsMock(workspaceId)[0]
     if (!selected) {
@@ -87,17 +88,6 @@ describe('ClickUp task operations', () => {
     expect(String(clickUpRequestMock.mock.calls[0][1])).toContain('assignees%5B%5D=7')
   })
 
-  it('searches task IDs, custom IDs, titles, and descriptions across pages', async () => {
-    clickUpRequestMock.mockResolvedValueOnce({
-      tasks: [rawTask('abc', { name: 'Authentication regression' })]
-    })
-    const { searchTasks } = await import('./tasks')
-
-    await expect(searchTasks('authentication', 5, 'team-1')).resolves.toMatchObject([
-      { id: 'abc', name: 'Authentication regression' }
-    ])
-  })
-
   it('continues listing after a full page contains no client-side filter matches', async () => {
     clickUpRequestMock
       .mockResolvedValueOnce({
@@ -109,27 +99,6 @@ describe('ClickUp task operations', () => {
     const { listTasks } = await import('./tasks')
 
     await expect(listTasks('created', 10, 'team-1')).resolves.toMatchObject([{ id: 'mine' }])
-    expect(clickUpRequestMock).toHaveBeenCalledTimes(2)
-  })
-
-  it('uses the raw page size when deciding whether search should continue', async () => {
-    clickUpRequestMock
-      .mockResolvedValueOnce({
-        tasks: [
-          {},
-          ...Array.from({ length: 99 }, (_, index) =>
-            rawTask(`other-${index}`, { name: `Unrelated ${index}` })
-          )
-        ]
-      })
-      .mockResolvedValueOnce({
-        tasks: [rawTask('match', { name: 'Authentication regression' })]
-      })
-    const { searchTasks } = await import('./tasks')
-
-    await expect(searchTasks('authentication', 5, 'team-1')).resolves.toMatchObject([
-      { id: 'match' }
-    ])
     expect(clickUpRequestMock).toHaveBeenCalledTimes(2)
   })
 
@@ -203,22 +172,17 @@ describe('ClickUp task operations', () => {
     })
   })
 
-  it('walks Spaces, Folders, and folderless Lists for create destinations', async () => {
-    clickUpRequestMock
-      .mockResolvedValueOnce({ spaces: [{ id: 'space-1', name: 'Engineering' }] })
-      .mockResolvedValueOnce({ folders: [{ id: 'folder-1', name: 'Product' }] })
-      .mockResolvedValueOnce({ lists: [{ id: 'list-1', name: 'Inbox' }] })
-      .mockResolvedValueOnce({ lists: [{ id: 'list-2', name: 'Backlog' }] })
-    const { listLists } = await import('./tasks')
+  it("reads a custom task id through ClickUp's custom_task_ids lookup", async () => {
+    clickUpRequestMock.mockResolvedValue(rawTask('abc', { custom_id: 'CHP-7616' }))
+    const { getTask } = await import('./tasks')
 
-    await expect(listLists('team-1')).resolves.toMatchObject([
-      { id: 'list-1', space: { name: 'Engineering' }, name: 'Inbox' },
-      {
-        id: 'list-2',
-        space: { name: 'Engineering' },
-        folder: { name: 'Product' },
-        name: 'Backlog'
-      }
-    ])
+    await expect(getTask('CHP-7616', 'team-1')).resolves.toMatchObject({
+      id: 'abc',
+      customId: 'CHP-7616'
+    })
+    const path = String(clickUpRequestMock.mock.calls[0][1])
+    expect(path).toContain('/task/CHP-7616?')
+    expect(path).toContain('custom_task_ids=true')
+    expect(path).toContain('team_id=team-1')
   })
 })

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetClickUpRateLimitStateForTests } from './rate-limit'
 
 const { ensureProxyMock, fetchMock, readAccountMock, readTokenMock } = vi.hoisted(() => ({
   ensureProxyMock: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock('./connection-storage', () => ({
 describe('ClickUp client', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
+    resetClickUpRateLimitStateForTests()
     // Why the port and not an electron mock: the client fetches through MainHttpClient
     // so it stays bootable on plain Node, which makes an electron net mock inert.
     const { setMainHttpClient } = await import('../network/http-client')
@@ -63,6 +65,51 @@ describe('ClickUp client', () => {
       'https://api.clickup.com/api/v2/user',
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     )
+  })
+
+  it("retries a rate-limited request after ClickUp's Retry-After", async () => {
+    vi.useFakeTimers()
+    try {
+      fetchMock
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ err: 'Rate limit reached' }), {
+            status: 429,
+            headers: { 'Retry-After': '1' }
+          })
+        )
+        .mockResolvedValueOnce(new Response(JSON.stringify({ user: { id: 7 } }), { status: 200 }))
+      const { clickUpRequest } = await import('./client')
+
+      const pending = clickUpRequest<{ user: { id: number } }>(
+        { workspace: { id: 'team-1', name: 'Engineering' }, token: 'pk_token' },
+        '/user'
+      )
+      await vi.advanceTimersByTimeAsync(1_000)
+
+      await expect(pending).resolves.toEqual({ user: { id: 7 } })
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('shares one request between identical concurrent reads', async () => {
+    let resolveFetch: (value: Response) => void = () => undefined
+    fetchMock.mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveFetch = resolve
+      })
+    )
+    const { clickUpRequest } = await import('./client')
+    const client = { workspace: { id: 'team-1', name: 'Engineering' }, token: 'pk_token' }
+
+    const first = clickUpRequest(client, '/team/team-1/space')
+    const second = clickUpRequest(client, '/team/team-1/space')
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    resolveFetch(new Response(JSON.stringify({ spaces: [] }), { status: 200 }))
+
+    await expect(Promise.all([first, second])).resolves.toEqual([{ spaces: [] }, { spaces: [] }])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('treats credential decryption failures as a disconnected client list', async () => {

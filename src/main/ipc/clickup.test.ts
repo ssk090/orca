@@ -6,6 +6,7 @@ const { createTaskMock, handleMock } = vi.hoisted(() => ({
 }))
 
 vi.mock('electron', () => ({
+  BrowserWindow: { getAllWindows: () => [] },
   ipcMain: { handle: handleMock }
 }))
 

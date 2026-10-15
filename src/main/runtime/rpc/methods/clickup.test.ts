@@ -85,7 +85,7 @@ describe('ClickUp RPC methods', () => {
     )
     expect(runtime.clickUpAddTaskComment).toHaveBeenCalledWith('abc', 'Ready', 'team-1')
     expect(runtime.clickUpTaskComments).toHaveBeenCalledWith('abc', 'team-1')
-    expect(runtime.clickUpListLists).toHaveBeenCalledWith('team-1')
+    expect(runtime.clickUpListLists).toHaveBeenCalledWith('team-1', undefined)
   })
 
   it('rejects malformed priorities and due dates before runtime dispatch', async () => {
