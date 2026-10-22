@@ -31,6 +31,10 @@ Select **ClickUp** from the Tasks source picker to:
 - create tasks in a selected ClickUp List;
 - update a task and start a linked Orca workspace.
 
+The task detail Status picker loads the task's List directly to obtain its
+configured workflow. Full List details are cached for five minutes separately
+from hierarchy summaries, which may omit statuses.
+
 When a ClickUp task is linked to an Orca workspace, the task reference appears
 in workspace context. Board moves can update ClickUp only when the destination
 maps to an exact status name available on that task's List; Orca does not guess
