@@ -481,9 +481,6 @@
             "d8401975b1": "approved",
             "f27676a92c": "status:"
           },
-          "ConnectIntegrationsList": {
-            "code_host_tasks_summary": "issues available as tasks · add Linear or Jira if your team plans work there"
-          },
           "FeatureWallSetupChecklist": {
             "b1f1981c5e": "See tasks"
           },

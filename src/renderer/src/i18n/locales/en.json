@@ -15832,7 +15832,7 @@
             "list_end": ", and ",
             "list_pair": " and ",
             "list_mid": ", ",
-            "code_host_tasks_summary": "issues available as tasks · add Linear or Jira if your team plans work there",
+            "code_host_tasks_summary": "issues available as tasks · add Linear, ClickUp, or Jira if your team plans work there",
             "code_host_tasks_caption": "Your code host's issues also work as tasks.",
             "review_step_title": "See PR status while agents work",
             "review_step_description": "Connect a review provider so Orca can show PR or MR status, checks, and reviews.",
