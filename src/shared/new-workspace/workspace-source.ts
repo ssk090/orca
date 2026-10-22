@@ -1,6 +1,6 @@
 import { getLinearOrganizationUrlKeyFromIssueUrl } from '../linear/links'
 import type { FolderWorkspaceLinkedTask } from '../folder-workspace-types'
-import { isClickUpHost } from '../clickup-task-url'
+import { isClickUpHost, parseClickUpTaskUrl } from '../clickup-task-url'
 import type { ClickUpTask } from '../clickup-types'
 import type { JiraIssue } from '../jira-types'
 import type { LinearIssue } from '../linear/issue-types'
@@ -179,6 +179,7 @@ export function buildJiraWorkspaceSource(
 export function buildClickUpWorkspaceSource(
   task: Pick<ClickUpTask, 'id' | 'customId' | 'name' | 'url'>
 ): ClickUpWorkspaceSource {
+  const parsedUrl = parseClickUpTaskUrl(task.url)
   return {
     provider: 'clickup',
     type: 'issue',
@@ -186,7 +187,7 @@ export function buildClickUpWorkspaceSource(
     number: 0,
     title: task.name,
     url: task.url,
-    clickupIdentifier: task.customId ?? task.id
+    clickupIdentifier: parsedUrl?.isCustomId === false ? task.id : (task.customId ?? task.id)
   }
 }
 

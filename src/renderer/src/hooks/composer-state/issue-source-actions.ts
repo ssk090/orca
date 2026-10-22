@@ -176,7 +176,13 @@ export function useIssueSourceActions(input: IssueSourceActionsInput) {
     (task: ClickUpTask, sourceContext: TaskSourceContext): void =>
       applyTrackerSourceSelection(
         { ...buildClickUpWorkspaceSource(task), clickupWorkspaceId: task.workspaceId },
-        sourceContext
+        {
+          ...sourceContext,
+          providerIdentity: {
+            provider: 'clickup',
+            workspaceId: task.workspaceId
+          }
+        }
       ),
     [applyTrackerSourceSelection]
   )
