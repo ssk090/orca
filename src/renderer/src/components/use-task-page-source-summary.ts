@@ -1,3 +1,4 @@
+import { useAppStore } from '@/store'
 import type { TaskPageSourceAvailabilityPreludeModel } from './use-task-page-source-availability'
 import { useMemo } from 'react'
 import type { TaskProvider } from '../../../shared/task-providers'
@@ -17,6 +18,12 @@ import {
 } from './task-source-context-summary'
 import { getRepoBackedTaskEmptyState } from '@/components/task-page-empty-state'
 export function useTaskPageSourceSummary(model: TaskPageSourceAvailabilityPreludeModel) {
+  const clickUpStatus = useAppStore((state) => state.clickUpStatus)
+  const workspaces = clickUpStatus.workspaces ?? []
+  const workspaceId =
+    clickUpStatus.selectedWorkspaceId ?? clickUpStatus.activeWorkspaceId ?? workspaces[0]?.id
+  const clickUpWorkspaceName =
+    workspaces.find((workspace) => workspace.id === workspaceId)?.name ?? null
   const {
     preflightStatus,
     preflightStatusChecked,
@@ -139,9 +146,11 @@ export function useTaskPageSourceSummary(model: TaskPageSourceAvailabilityPrelud
       selectedRepoCount: selectedRepos.length,
       linearWorkspaceName:
         selectedLinearWorkspace?.organizationName ?? selectedLinearWorkspace?.id ?? null,
+      clickUpWorkspaceName,
       jiraSiteName: selectedJiraSite?.displayName ?? selectedJiraSite?.siteUrl ?? null
     })
   }, [
+    clickUpWorkspaceName,
     selectedJiraSite,
     selectedLinearWorkspace,
     selectedRepos.length,
