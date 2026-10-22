@@ -223,7 +223,10 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
       workspaceId,
       options?.taskScope
     )
-    if (generation !== mutationGeneration) {
+    if (
+      generation !== mutationGeneration ||
+      (!scope.explicitSource && scope.contextKey !== getProviderRuntimeContextKey(get().settings))
+    ) {
       return tasks
     }
     set((state) => ({
@@ -264,7 +267,10 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
       workspaceId,
       options?.taskScope
     )
-    if (generation !== mutationGeneration) {
+    if (
+      generation !== mutationGeneration ||
+      (!scope.explicitSource && scope.contextKey !== getProviderRuntimeContextKey(get().settings))
+    ) {
       return tasks
     }
     set((state) => ({

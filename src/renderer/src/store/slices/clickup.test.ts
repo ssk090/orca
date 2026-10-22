@@ -6,6 +6,7 @@ import {
   getTaskSourceCacheScope,
   type TaskSourceContext
 } from '../../../../shared/task-source-context'
+import { getDefaultSettings } from '../../../../shared/constants'
 import { createClickUpSlice } from './clickup'
 import { CLICKUP_DEFAULT_CACHE_SCOPE } from './clickup-task-cache-patch'
 
@@ -169,6 +170,36 @@ describe('createClickUpSlice', () => {
         ? store.getState().searchClickUpTasks('abc', 20)
         : store.getState().listClickUpTasks('assigned', 20)
     await store.getState().selectClickUpWorkspace('team-2')
+    resolveRequest([task('abc')])
+    await pending
+
+    expect(store.getState().clickUpSearchCache).toEqual({})
+    expect(store.getState().clickUpListCache).toEqual({})
+  })
+
+  it.each([
+    ['search', clickUpSearchTasks],
+    ['list', clickUpListTasks]
+  ])('does not cache a stale %s response after the runtime changes', async (kind, requestMock) => {
+    let resolveRequest!: (tasks: ClickUpTask[]) => void
+    requestMock.mockReturnValueOnce(
+      new Promise<ClickUpTask[]>((resolve) => {
+        resolveRequest = resolve
+      })
+    )
+    const store = createTestStore()
+    store.setState({
+      settings: { ...getDefaultSettings('/tmp'), activeRuntimeEnvironmentId: 'runtime-1' },
+      clickUpStatus: { connected: true, viewer: null, selectedWorkspaceId: 'team-1' }
+    })
+
+    const pending =
+      kind === 'search'
+        ? store.getState().searchClickUpTasks('abc', 20)
+        : store.getState().listClickUpTasks('assigned', 20)
+    store.setState({
+      settings: { ...getDefaultSettings('/tmp'), activeRuntimeEnvironmentId: 'runtime-2' }
+    })
     resolveRequest([task('abc')])
     await pending
 
