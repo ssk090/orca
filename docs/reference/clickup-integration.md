@@ -81,25 +81,6 @@ orca worktree set --worktree active --clickup-task 86abc123 --clickup-workspace 
 orca worktree create --name auth-fix --clickup-task 86abc123 --clickup-workspace 12345 --json
 ```
 
-## Development macOS Build
-
-The fork-only `Development macOS Build` workflow runs for pushes to
-`clickup-issues` in `luizeof/orca`. It builds unsigned Apple Silicon and Intel
-packages on `macos-15` and uploads the DMG and ZIP files as a single workflow
-artifact retained for seven days.
-
-To test a local checkout on a Mac:
-
-```bash
-pnpm install --frozen-lockfile
-pnpm verify:macos-entitlements
-pnpm build:mac
-```
-
-Unsigned development builds may require macOS to confirm the first launch.
-Release signing and notarization are intentionally outside this personal test
-workflow.
-
 ## Troubleshooting
 
 - **No connected account:** connect the Personal API token on the runtime that
