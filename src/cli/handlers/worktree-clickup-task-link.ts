@@ -34,6 +34,6 @@ export function getOptionalClickUpTaskLinkFlag(
   }
   return {
     linkedClickUpTaskId: taskId,
-    ...(typeof workspace === 'string' ? { linkedClickUpWorkspaceId: workspace.trim() } : {})
+    linkedClickUpWorkspaceId: typeof workspace === 'string' ? workspace.trim() : null
   }
 }
