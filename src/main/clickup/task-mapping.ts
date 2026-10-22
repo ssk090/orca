@@ -5,7 +5,8 @@ import type {
   ClickUpTask,
   ClickUpUser
 } from '../../shared/clickup-types'
-import { getStatus, type ClickUpClientForWorkspace } from './client'
+import type { ClickUpClientForWorkspace } from './client'
+import { readClickUpAccount } from './connection-storage'
 
 import { asRecord, type JsonRecord } from './json-record'
 
@@ -144,7 +145,8 @@ export function normalizeClickUpTask(
   // Why: task reads are token-scoped, so an "all" selection can return a task
   // through the first client even when another Workspace owns it.
   const workspace =
-    getStatus().workspaces?.find((item) => item.id === responseWorkspaceId) ?? client.workspace
+    readClickUpAccount()?.workspaces.find((item) => item.id === responseWorkspaceId) ??
+    client.workspace
   return {
     id,
     customId: asString(record.custom_id) ?? null,

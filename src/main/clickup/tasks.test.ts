@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ClickUpClientForWorkspace } from './client'
 
-const { clickUpRequestMock, getClientsMock, getStatusMock } = vi.hoisted(() => ({
-  clickUpRequestMock: vi.fn(),
-  getClientsMock: vi.fn(),
-  getStatusMock: vi.fn()
-}))
+const { clickUpRequestMock, getClientsMock, getStatusMock, readClickUpAccountMock } = vi.hoisted(
+  () => ({
+    clickUpRequestMock: vi.fn(),
+    getClientsMock: vi.fn(),
+    getStatusMock: vi.fn(),
+    readClickUpAccountMock: vi.fn()
+  })
+)
 
 vi.mock('./client', () => ({
   ClickUpApiError: class ClickUpApiError extends Error {
@@ -33,6 +36,10 @@ vi.mock('./client', () => ({
     }
     return selected
   }
+}))
+
+vi.mock('./connection-storage', () => ({
+  readClickUpAccount: (...args: unknown[]) => readClickUpAccountMock(...args)
 }))
 
 function client(id = 'team-1'): ClickUpClientForWorkspace {
@@ -66,6 +73,7 @@ describe('ClickUp task operations', () => {
     vi.clearAllMocks()
     getClientsMock.mockReturnValue([client()])
     getStatusMock.mockReturnValue({ connected: true, viewer: { id: 7, username: 'Ada' } })
+    readClickUpAccountMock.mockReturnValue(null)
   })
 
   it('maps ClickUp task fields and scopes assigned listings to the viewer', async () => {
@@ -103,13 +111,15 @@ describe('ClickUp task operations', () => {
   })
 
   it('uses the task response Workspace when an all-Workspace client reads it', async () => {
-    getStatusMock.mockReturnValue({
-      connected: true,
+    readClickUpAccountMock.mockReturnValue({
+      version: 1,
       viewer: { id: 7, username: 'Ada' },
       workspaces: [
         { id: 'team-1', name: 'First' },
         { id: 'team-2', name: 'Second' }
-      ]
+      ],
+      activeWorkspaceId: 'team-1',
+      selectedWorkspaceId: 'all'
     })
     clickUpRequestMock.mockResolvedValue(rawTask('abc', { team_id: 'team-2' }))
     const { getTask } = await import('./tasks')
