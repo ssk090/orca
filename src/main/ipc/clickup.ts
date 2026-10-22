@@ -14,7 +14,7 @@ import {
   searchTasks,
   updateTask
 } from '../clickup/tasks'
-import { _resetPreflightCache } from './preflight'
+import { _resetPreflightCache } from '../preflight/agent-detection'
 import { asRecord } from '../clickup/json-record'
 import { normalizeClickUpTaskScope } from '../clickup/task-scope'
 import { isClickUpTaskFilter } from '../../shared/clickup-task-filter'

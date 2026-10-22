@@ -60,6 +60,7 @@ const {
   registerCodexConfigSyncHandlersMock,
   registerOnboardingHandlersMock,
   registerDashboardPopoutHandlersMock,
+  registerWorkspaceSpaceWindowHandlersMock,
   isDashboardPopoutRendererMock,
   registerTerminalPreviewHandlersMock,
   registerSpeechHandlersMock,
@@ -131,6 +132,7 @@ const {
   registerCodexConfigSyncHandlersMock: vi.fn(),
   registerOnboardingHandlersMock: vi.fn(),
   registerDashboardPopoutHandlersMock: vi.fn(),
+  registerWorkspaceSpaceWindowHandlersMock: vi.fn(),
   isDashboardPopoutRendererMock: vi.fn(),
   registerTerminalPreviewHandlersMock: vi.fn(),
   registerSpeechHandlersMock: vi.fn(),
@@ -155,7 +157,7 @@ vi.mock('../../shared/runtime-environment-store', () => ({
   listEnvironments: listEnvironmentsMock
 }))
 
-vi.mock('../runtime-environment-transport-routing', () => ({
+vi.mock('../runtime-environments/runtime-environment-transport-routing', () => ({
   callRuntimeEnvironment: callRuntimeEnvironmentMock
 }))
 
@@ -169,6 +171,10 @@ vi.mock('../onboarding', () => ({
 
 vi.mock('../dashboard-popout', () => ({
   registerDashboardPopoutHandlers: registerDashboardPopoutHandlersMock
+}))
+
+vi.mock('../workspace-space-window', () => ({
+  registerWorkspaceSpaceWindowHandlers: registerWorkspaceSpaceWindowHandlersMock
 }))
 
 vi.mock('../../window/dashboard-popout-window', () => ({
@@ -296,7 +302,7 @@ vi.mock('../filesystem', () => ({
   registerFilesystemHandlers: registerFilesystemHandlersMock
 }))
 
-vi.mock('../filesystem-watcher', () => ({
+vi.mock('../filesystem-watcher-handlers', () => ({
   registerFilesystemWatcherHandlers: registerFilesystemWatcherHandlersMock
 }))
 
@@ -308,13 +314,17 @@ vi.mock('../runtime', () => ({
   registerRuntimeHandlers: registerRuntimeHandlersMock
 }))
 
-vi.mock('../runtime-environments', () => ({
+vi.mock('../runtime-environments/runtime-environments', () => ({
   invalidateRuntimeEnvironmentTransport: vi.fn(),
   registerRuntimeEnvironmentHandlers: registerRuntimeEnvironmentHandlersMock
 }))
 
 vi.mock('../wsl-host-handlers', () => ({
   registerWslHostHandlers: vi.fn()
+}))
+
+vi.mock('../wsl-move-handlers', () => ({
+  registerWslMoveHandlers: vi.fn()
 }))
 
 vi.mock('../ephemeral-vm', () => ({
@@ -391,7 +401,7 @@ vi.mock('../terminal-render-desync-evidence', () => ({
   registerTerminalRenderDesyncEvidenceHandler: registerTerminalRenderDesyncEvidenceHandlerMock
 }))
 
-vi.mock('../linear', () => ({
+vi.mock('../linear/register-handlers', () => ({
   registerLinearHandlers: registerLinearHandlersMock
 }))
 
@@ -399,11 +409,11 @@ vi.mock('../clickup', () => ({
   registerClickUpHandlers: registerClickUpHandlersMock
 }))
 
-vi.mock('../jira', () => ({
+vi.mock('../jira/register-handlers', () => ({
   registerJiraHandlers: registerJiraHandlersMock
 }))
 
-vi.mock('../jira-issue-summary-generation', () => ({
+vi.mock('../jira/issue-summary-generation', () => ({
   registerJiraIssueSummaryGenerationHandlers: registerJiraIssueSummaryGenerationHandlersMock
 }))
 
@@ -496,6 +506,7 @@ describe('registerCoreHandlers', () => {
     registerHostedReviewHandlersMock.mockReset()
     registerExportHandlersMock.mockReset()
     registerDashboardPopoutHandlersMock.mockReset()
+    registerWorkspaceSpaceWindowHandlersMock.mockReset()
     registerTerminalPreviewHandlersMock.mockReset()
     registerSpeechHandlersMock.mockReset()
     registerSkillsHandlersMock.mockReset()
@@ -567,6 +578,7 @@ describe('registerCoreHandlers', () => {
       museUsage
     })
     expect(registerAppHandlersMock).toHaveBeenCalledWith(store, {
+      quitResumeRecordsFor: expect.any(Function),
       onBeforeRelaunch,
       onBeforeRelaunchExit: expect.any(Function)
     })
@@ -607,6 +619,7 @@ describe('registerCoreHandlers', () => {
     expect(registerDeveloperPermissionHandlersMock).toHaveBeenCalled()
     expect(registerComputerUsePermissionHandlersMock).toHaveBeenCalled()
     expect(registerDashboardPopoutHandlersMock).toHaveBeenCalledWith(store, undefined)
+    expect(registerWorkspaceSpaceWindowHandlersMock).toHaveBeenCalledWith(store)
     expect(registerTerminalPreviewHandlersMock).toHaveBeenCalledWith(runtime)
     expect(registerSettingsHandlersMock).toHaveBeenCalledWith(store, agentAwakeService)
     expect(registerSkillsHandlersMock).toHaveBeenCalledWith(store, runtime)
@@ -639,7 +652,9 @@ describe('registerCoreHandlers', () => {
     expect(registerCliHandlersMock).toHaveBeenCalled()
     expect(registerPreflightHandlersMock).toHaveBeenCalled()
     expect(registerShellHandlersMock).toHaveBeenCalledWith(store)
-    expect(registerClipboardHandlersMock).toHaveBeenCalledWith(store)
+    expect(registerClipboardHandlersMock).toHaveBeenCalledWith(store, {
+      localChatAttachmentStore: expect.any(Function)
+    })
     expect(registerUpdaterHandlersMock).toHaveBeenCalled()
     expect(setTrustedBrowserRendererWebContentsIdMock).toHaveBeenCalledWith(null)
     expect(setTrustedClipboardRendererWebContentsIdMock).toHaveBeenCalledWith(null)

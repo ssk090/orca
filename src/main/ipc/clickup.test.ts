@@ -31,7 +31,7 @@ vi.mock('../clickup/tasks', () => ({
   updateTask: vi.fn()
 }))
 
-vi.mock('./preflight', () => ({
+vi.mock('../preflight/agent-detection', () => ({
   _resetPreflightCache: vi.fn()
 }))
 
