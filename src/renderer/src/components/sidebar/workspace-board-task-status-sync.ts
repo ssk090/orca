@@ -24,8 +24,8 @@ export type WorkspaceBoardTaskStatusSyncResult = {
 
 export type WorkspaceBoardTaskStatusSyncMessage =
   | { kind: 'issue-read-failed'; issueIdentifier: string; provider?: 'ClickUp' }
-  | { kind: 'missing-workflow-state'; statusLabel: string }
-  | { kind: 'ambiguous-workflow-state'; statusLabel: string }
+  | { kind: 'missing-workflow-state'; statusLabel: string; provider?: 'ClickUp' }
+  | { kind: 'ambiguous-workflow-state'; statusLabel: string; provider?: 'ClickUp' }
   | { kind: 'update-failed'; issueIdentifier: string; detail?: string; provider?: 'ClickUp' }
   | { kind: 'provider-error'; issueIdentifier: string; detail?: string; provider?: 'ClickUp' }
   | { kind: 'owner-ambiguous'; issueIdentifier: string }

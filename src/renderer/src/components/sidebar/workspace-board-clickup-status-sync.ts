@@ -1,5 +1,6 @@
 import {
   clickUpGetTask,
+  clickUpListLists,
   clickUpUpdateTask,
   type RuntimeClickUpSettings
 } from '@/runtime/runtime-clickup-client'
@@ -12,6 +13,7 @@ import type {
 import type { WorkspaceBoardTaskStatusSyncResult } from './workspace-board-task-status-sync'
 
 export type WorkspaceBoardClickUpStatusSyncDependencies = {
+  listClickUpLists: typeof clickUpListLists
   getClickUpTask: typeof clickUpGetTask
   updateClickUpTask: typeof clickUpUpdateTask
 }
@@ -29,6 +31,7 @@ type WorkspaceBoardClickUpStatusSyncArgs = {
 
 export const DEFAULT_WORKSPACE_BOARD_CLICKUP_STATUS_SYNC_DEPS: WorkspaceBoardClickUpStatusSyncDependencies =
   {
+    listClickUpLists: clickUpListLists,
     getClickUpTask: clickUpGetTask,
     updateClickUpTask: clickUpUpdateTask
   }
@@ -80,12 +83,28 @@ export async function syncClickUpWorktreeStatus(
       result.skipped += 1
       return result
     }
-    // Why: ClickUp accepts the List's exact status name, while the board keeps
-    // provider-neutral labels rather than provider-specific status IDs.
+    const lists = await deps.listClickUpLists(settings, task.workspaceId, task.list.id)
+    const matches = (lists.find((list) => list.id === task.list.id)?.statuses ?? []).filter(
+      (status) =>
+        normalizedStatusName(status.name) === normalizedStatusName(args.targetStatus.label)
+    )
+    if (matches.length !== 1) {
+      result.skipped += 1
+      result.messages.push({
+        kind: matches.length === 0 ? 'missing-workflow-state' : 'ambiguous-workflow-state',
+        statusLabel: args.targetStatus.label,
+        provider: 'ClickUp'
+      })
+      return result
+    }
+    if (args.getLatestWorkspaceStatus(worktreeId) !== args.targetStatus.id) {
+      result.skipped += 1
+      return result
+    }
     const updateResult: ClickUpMutationResult = await deps.updateClickUpTask(
       settings,
       task.id,
-      { status: args.targetStatus.label },
+      { status: matches[0].name },
       workspaceId ?? task.workspaceId
     )
     if (updateResult.ok === false) {

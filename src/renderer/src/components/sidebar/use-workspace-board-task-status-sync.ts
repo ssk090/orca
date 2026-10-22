@@ -30,12 +30,26 @@ function formatTaskStatusSyncMessage(message: WorkspaceBoardTaskStatusSyncMessag
         { value0: message.issueIdentifier }
       )
     case 'missing-workflow-state':
+      if (message.provider === 'ClickUp') {
+        return translate(
+          'auto.components.sidebar.WorkspaceKanbanDrawer.clickUpStatusMissing',
+          'No matching ClickUp status for {{value0}}.',
+          { value0: message.statusLabel }
+        )
+      }
       return translate(
         'auto.components.sidebar.WorkspaceKanbanDrawer.d2e3f4a5b6',
         'No matching Linear workflow state for {{value0}}.',
         { value0: message.statusLabel }
       )
     case 'ambiguous-workflow-state':
+      if (message.provider === 'ClickUp') {
+        return translate(
+          'auto.components.sidebar.WorkspaceKanbanDrawer.clickUpStatusAmbiguous',
+          'Multiple ClickUp statuses match {{value0}}.',
+          { value0: message.statusLabel }
+        )
+      }
       return translate(
         'auto.components.sidebar.WorkspaceKanbanDrawer.e3f4a5b6c7',
         'Multiple Linear workflow states match {{value0}}.',

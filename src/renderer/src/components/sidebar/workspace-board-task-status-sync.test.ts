@@ -143,6 +143,9 @@ describe('syncWorkspaceBoardTaskStatuses', () => {
       linkedClickUpTaskId: 'task-1',
       linkedClickUpWorkspaceId: 'clickup-workspace-1'
     })
+    const listClickUpLists = vi
+      .fn()
+      .mockResolvedValue([{ id: 'list-1', statuses: [{ name: 'In review' }] }])
     const getClickUpTask = vi.fn().mockResolvedValue(clickUpTask())
     const updateClickUpTask = vi
       .fn<() => Promise<ClickUpMutationResult>>()
@@ -155,7 +158,7 @@ describe('syncWorkspaceBoardTaskStatuses', () => {
         worktreesById: new Map([[item.id, item]]),
         settings: { kind: 'environment', environmentId: 'runtime-1' },
         getLatestWorkspaceStatus: () => 'in-review',
-        deps: { getClickUpTask, updateClickUpTask }
+        deps: { getClickUpTask, listClickUpLists, updateClickUpTask }
       })
     ).resolves.toEqual({ updated: 1, skipped: 0, failed: 0, messages: [] })
 
@@ -179,6 +182,9 @@ describe('syncWorkspaceBoardTaskStatuses', () => {
       linkedClickUpTaskId: 'task-1',
       linkedClickUpWorkspaceId: 'clickup-workspace-1'
     })
+    const listClickUpLists = vi
+      .fn()
+      .mockResolvedValue([{ id: 'list-1', statuses: [{ name: 'In review' }] }])
     const getClickUpTask = vi.fn().mockResolvedValue(clickUpTask())
     const updateClickUpTask = vi
       .fn<() => Promise<ClickUpMutationResult>>()
@@ -189,7 +195,7 @@ describe('syncWorkspaceBoardTaskStatuses', () => {
       targetStatus: targetStatus(),
       worktreesById: new Map([[item.id, item]]),
       getLatestWorkspaceStatus: () => 'in-review',
-      deps: { getClickUpTask, updateClickUpTask }
+      deps: { getClickUpTask, listClickUpLists, updateClickUpTask }
     })
 
     expect(getClickUpTask).toHaveBeenCalledWith(undefined, 'task-1', 'clickup-workspace-1')
@@ -207,6 +213,9 @@ describe('syncWorkspaceBoardTaskStatuses', () => {
       linkedClickUpTaskId: 'task-1',
       linkedClickUpWorkspaceId: null
     })
+    const listClickUpLists = vi
+      .fn()
+      .mockResolvedValue([{ id: 'list-1', statuses: [{ name: 'In review' }] }])
     const getClickUpTask = vi.fn().mockResolvedValue(clickUpTask())
     const updateClickUpTask = vi
       .fn<() => Promise<ClickUpMutationResult>>()
@@ -218,7 +227,7 @@ describe('syncWorkspaceBoardTaskStatuses', () => {
         targetStatus: targetStatus(),
         worktreesById: new Map([[item.id, item]]),
         getLatestWorkspaceStatus: () => 'in-review',
-        deps: { getClickUpTask, updateClickUpTask }
+        deps: { getClickUpTask, listClickUpLists, updateClickUpTask }
       })
     ).resolves.toEqual({
       updated: 0,
