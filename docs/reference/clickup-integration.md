@@ -1,7 +1,6 @@
 # ClickUp Integration
 
-Orca can use ClickUp as a task source in the desktop app, through a paired
-mobile client, and from the `orca clickup` CLI. A ClickUp task can also be
+Orca can use ClickUp as a task source in the desktop app and from the `orca clickup` CLI. A ClickUp task can also be
 linked to an Orca workspace so its context follows the worktree.
 
 ## Connect ClickUp
@@ -31,13 +30,6 @@ Select **ClickUp** from the Tasks source picker to:
 - inspect descriptions, assignees, tags, status, due date, and comments;
 - create tasks in a selected ClickUp List;
 - update a task and start a linked Orca workspace.
-
-A paired mobile client can search assigned ClickUp tasks, read descriptions and
-comments, open the task in ClickUp, and start a linked Orca workspace in a
-selected Git repository. Task creation and metadata editing remain on desktop.
-The mobile client uses the selected runtime's ClickUp connection. This keeps SSH
-and remote behavior consistent with the desktop app: the runtime that answers
-the mobile RPC owns the credential and performs the ClickUp request.
 
 When a ClickUp task is linked to an Orca workspace, the task reference appears
 in workspace context. Board moves can update ClickUp only when the destination
