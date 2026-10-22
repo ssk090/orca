@@ -78,9 +78,11 @@ export function folderWorkspaceToWorktree(folderWorkspace: FolderWorkspace): Wor
     linkedLinearIssueOrganizationUrlKey:
       selectedTask?.provider === 'linear' ? (selectedTask.linearOrganizationUrlKey ?? null) : null,
     linkedClickUpTaskId:
-      linkedTask?.provider === 'clickup' ? (linkedTask.clickupIdentifier ?? null) : null,
+      selectedTask?.provider === 'clickup'
+        ? (selectedTask.clickupIdentifier ?? selectedTask.identifier ?? null)
+        : null,
     linkedClickUpWorkspaceId:
-      linkedTask?.provider === 'clickup' ? (linkedTask.clickupWorkspaceId ?? null) : null,
+      selectedTask?.provider === 'clickup' ? (selectedTask.clickupWorkspaceId ?? null) : null,
     linkedGitLabMR: null,
     linkedGitLabIssue:
       selectedTask?.provider === 'gitlab' && selectedTask.type === 'issue'
