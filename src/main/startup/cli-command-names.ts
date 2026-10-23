@@ -15,6 +15,7 @@ export const CLI_COMMAND_NAMES = [
   'clickup',
   'clipboard',
   'computer',
+  'connector',
   'console',
   'cookie',
   'dblclick',

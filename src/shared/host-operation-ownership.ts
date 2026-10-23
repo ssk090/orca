@@ -24,6 +24,7 @@ export const HOST_OPERATION_OWNERSHIP = {
   clickup: 'scope-picked',
   clipboard: 'host',
   computer: 'host',
+  connector: 'host',
   desktopBrowserBridge: 'host',
   diagnostics: 'host',
   emulator: 'host',
