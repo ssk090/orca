@@ -137,15 +137,16 @@ export function useWorkItemSourceFoundation(props: NormalizedWorkItemSourceSearc
     [props.linearSourceContext, selectedRepo]
   )
   const state = useWorkItemSourceState(textOnly, value)
-  const hasLinearSourceOverride = props.linearSourceContext?.provider === 'linear'
+  // Why: Linear's status must come from the host the search runs on, not the focused one (#32924).
+  const hasLinearSearchSource = linearSourceContext !== null
   const linearConnection = useLinearSourceConnection({
-    enabled: hasLinearSourceOverride && !disabled && !textOnly,
-    sourceContext: hasLinearSourceOverride ? linearSourceContext : null
+    enabled: hasLinearSearchSource && !disabled && !textOnly,
+    sourceContext: linearSourceContext
   })
-  const linearStatus = hasLinearSourceOverride
+  const linearStatus = hasLinearSearchSource
     ? (linearConnection.status ?? { connected: false, viewer: null })
     : defaultLinearStatus
-  const linearStatusChecked = hasLinearSourceOverride
+  const linearStatusChecked = hasLinearSearchSource
     ? linearConnection.loaded
     : defaultLinearStatusChecked
   const jiraConnection = useJiraSourceConnection({
@@ -183,8 +184,9 @@ export function useWorkItemSourceFoundation(props: NormalizedWorkItemSourceSearc
     expectedPreflightContextKey,
     refreshPreflightStatus,
     linearStatus,
-    // Explicit sources load independently instead of refreshing the focused runtime's store.
-    linearStatusChecked: hasLinearSourceOverride || linearStatusChecked,
+    // A host-scoped source loads independently instead of refreshing the focused runtime's store.
+    linearStatusChecked: hasLinearSearchSource || linearStatusChecked,
+    linearStatusPending: hasLinearSearchSource && !linearConnection.loaded,
     checkLinearConnection,
     jiraSourceConnected,
     clickUpModeAvailable: props.clickUpEnabled === true && clickUpConnected
@@ -200,7 +202,7 @@ export function useWorkItemSourceFoundation(props: NormalizedWorkItemSourceSearc
     getCachedWorkItems,
     linearStatus,
     linearStatusChecked,
-    linearWorkspaceIdOverride: hasLinearSourceOverride
+    linearWorkspaceIdOverride: hasLinearSearchSource
       ? (linearStatus.selectedWorkspaceId ?? linearStatus.activeWorkspaceId ?? null)
       : undefined,
     listLinearIssues,

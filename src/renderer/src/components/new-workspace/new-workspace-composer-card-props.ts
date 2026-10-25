@@ -14,7 +14,7 @@ import type { SmartWorkspaceNameSelection } from '@/components/new-workspace/sma
 import type { GitHubWorkItem } from '../../../../shared/github/work-item-types'
 import type { GitLabWorkItem } from '../../../../shared/gitlab-types'
 import type { ClickUpTask } from '../../../../shared/clickup-types'
-import type { JiraIssue } from '../../../../shared/jira-types'
+import type { JiraIssue } from '../../../../shared/jira/jira-types'
 import type { LinearIssue } from '../../../../shared/linear/issue-types'
 import type { OrcaHooks, SetupAgentStartupPolicy } from '../../../../shared/orca-yaml-hook-types'
 import type { SparsePreset } from '../../../../shared/worktree/create-types'

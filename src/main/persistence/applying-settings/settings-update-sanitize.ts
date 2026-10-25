@@ -2,12 +2,9 @@ import { normalizeAgentNativeChatPermissionModes } from '../../../shared/agent-c
 import { normalizeNativeChatAppearanceSettings } from '../../../shared/native-chat-appearance-settings'
 import type { GlobalSettings } from '../../../shared/global-settings-types'
 import { normalizeDisabledTuiAgents } from '../../../shared/tui-agent-selection'
-import { normalizeNativeChatProviderChoices } from '../../../shared/native-chat-providers'
+import { normalizeNativeChatProviderChoices } from '../../../shared/native-chat/native-chat-providers'
 import { resolveNestedWorkerMaxDepth } from '../../../shared/nested-worker-depth'
-import {
-  normalizeTuiAgentArgsRecord,
-  normalizeTuiAgentEnvRecord
-} from '../../../shared/tui-agent-launch-defaults'
+import { sanitizeAgentLaunchProfileUpdates } from '../../../shared/tui-agent-launch-defaults'
 import { normalizeTerminalQuickCommands } from '../../../shared/terminal-quick-commands'
 import { assertTerminalQuickCommandsStorable } from '../../../shared/terminal-quick-command-prompt-limit'
 import { normalizeTerminalCustomThemes } from '../../../shared/terminal-custom-themes'
@@ -84,14 +81,7 @@ export function sanitizeSettingsFieldUpdates(
       })
     }
   }
-  if ('agentDefaultArgs' in updates) {
-    sanitizedUpdates.agentDefaultArgs = normalizeTuiAgentArgsRecord(updates.agentDefaultArgs)
-    sanitizedUpdates.agentYoloDefaultsMigrated = true
-  }
-  if ('agentDefaultEnv' in updates) {
-    sanitizedUpdates.agentDefaultEnv = normalizeTuiAgentEnvRecord(updates.agentDefaultEnv)
-    sanitizedUpdates.agentYoloDefaultsMigrated = true
-  }
+  sanitizeAgentLaunchProfileUpdates(sanitizedUpdates, updates)
   if ('terminalQuickCommands' in updates) {
     const terminalQuickCommands = normalizeTerminalQuickCommands(updates.terminalQuickCommands)
     assertTerminalQuickCommandsStorable(terminalQuickCommands)

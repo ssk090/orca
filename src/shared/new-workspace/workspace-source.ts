@@ -2,7 +2,7 @@ import { getLinearOrganizationUrlKeyFromIssueUrl } from '../linear/links'
 import type { FolderWorkspaceLinkedTask } from '../folder-workspace-types'
 import { isClickUpHost, parseClickUpTaskUrl } from '../clickup-task-url'
 import type { ClickUpTask } from '../clickup-types'
-import type { JiraIssue } from '../jira-types'
+import type { JiraIssue } from '../jira/jira-types'
 import type { LinearIssue } from '../linear/issue-types'
 import {
   getLinkedWorkItemSuggestedName,
