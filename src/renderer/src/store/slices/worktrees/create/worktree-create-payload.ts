@@ -36,6 +36,32 @@ export type CreateWorktreeCallOptions = {
   }
 }
 
+export function optionalCreateWorktreeLinkOptions(
+  source: Pick<
+    CreateWorktreeCallOptions,
+    | 'linkedWorkItem'
+    | 'linkedTaskSourceContext'
+    | 'linkedClickUpTaskId'
+    | 'linkedClickUpWorkspaceId'
+  >
+): Pick<
+  CreateWorktreeCallOptions,
+  'linkedWorkItem' | 'linkedTaskSourceContext' | 'linkedClickUpTaskId' | 'linkedClickUpWorkspaceId'
+> {
+  return {
+    ...(source.linkedWorkItem !== undefined ? { linkedWorkItem: source.linkedWorkItem } : {}),
+    ...(source.linkedTaskSourceContext !== undefined
+      ? { linkedTaskSourceContext: source.linkedTaskSourceContext }
+      : {}),
+    ...(source.linkedClickUpTaskId !== undefined
+      ? { linkedClickUpTaskId: source.linkedClickUpTaskId }
+      : {}),
+    ...(source.linkedClickUpWorkspaceId !== undefined
+      ? { linkedClickUpWorkspaceId: source.linkedClickUpWorkspaceId }
+      : {})
+  }
+}
+
 export type HostAgentLaunch = {
   agent: TuiAgent
   prompt?: string

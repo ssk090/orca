@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { ComponentProps } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ClickUpTask } from '../../../shared/clickup-types'
 import { ClickUpTaskDetailSheet } from './ClickUpTaskDetailSheet'
@@ -94,5 +95,32 @@ describe('ClickUp task saves', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await screen.findByText('Rejected')
     expect(mocks.patch).not.toHaveBeenCalled()
+  })
+
+  it('patches caches but does not reopen the sheet after a late save', async () => {
+    const refreshed: ClickUpTask = { ...task, name: 'Renamed', updatedAt: '1' }
+    let resolveRefresh: (value: ClickUpTask) => void = () => {}
+    mocks.refresh.mockImplementation(
+      () =>
+        new Promise<ClickUpTask>((resolve) => {
+          resolveRefresh = resolve
+        })
+    )
+    const onTaskChanged = vi.fn()
+    const props: ComponentProps<typeof ClickUpTaskDetailSheet> = {
+      task,
+      sourceContext: null,
+      onClose: vi.fn(),
+      onStartWorkspace: vi.fn(),
+      onTaskChanged
+    }
+    const view = render(<ClickUpTaskDetailSheet {...props} />)
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Renamed' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocks.update).toHaveBeenCalled())
+    view.rerender(<ClickUpTaskDetailSheet {...props} task={null} />)
+    resolveRefresh(refreshed)
+    await waitFor(() => expect(mocks.patch).toHaveBeenCalledWith('abc', refreshed, null))
+    expect(onTaskChanged).not.toHaveBeenCalled()
   })
 })

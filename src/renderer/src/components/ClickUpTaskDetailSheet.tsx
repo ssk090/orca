@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, ExternalLink, Loader2, MessageSquare } from 'lucide-react'
 import type {
   ClickUpComment,
@@ -64,6 +64,8 @@ export function ClickUpTaskDetailSheet({
   const [saving, setSaving] = useState(false)
   const [commenting, setCommenting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const taskRef = useRef(task)
+  taskRef.current = task
 
   useEffect(() => {
     if (!task) {
@@ -119,6 +121,14 @@ export function ClickUpTaskDetailSheet({
     if (Object.keys(update).length === 0) {
       return
     }
+    const savedTaskId = task.id
+    const savedDraft = {
+      name: name.trim(),
+      description,
+      status,
+      priority,
+      dueDate
+    }
     setSaving(true)
     setError(null)
     const result = await clickUpUpdateTask(sourceContext, task.id, update, task.workspaceId).catch(
@@ -148,8 +158,17 @@ export function ClickUpTaskDetailSheet({
     }).catch(() => null)
     setSaving(false)
     if (refreshed) {
-      patchTask(task.id, refreshed, sourceContext)
-      onTaskChanged(refreshed)
+      patchTask(savedTaskId, refreshed, sourceContext)
+      const stillOnTask = taskRef.current?.id === savedTaskId
+      const draftUnchanged =
+        name.trim() === savedDraft.name &&
+        description === savedDraft.description &&
+        status === savedDraft.status &&
+        priority === savedDraft.priority &&
+        dueDate === savedDraft.dueDate
+      if (stillOnTask && draftUnchanged) {
+        onTaskChanged(refreshed)
+      }
     }
   }
 

@@ -72,4 +72,32 @@ describe('ClickUp board status sync', () => {
     await expect(run()).resolves.toMatchObject({ skipped: 1, failed: 0 })
     expect(deps.updateClickUpTask).not.toHaveBeenCalled()
   })
+
+  it('skips when owner refuses settings without calling ClickUp', async () => {
+    const deps = {
+      getClickUpTask: vi.fn(),
+      listClickUpLists: vi.fn(),
+      updateClickUpTask: vi.fn()
+    }
+    const result = await syncClickUpWorktreeStatus(
+      {
+        targetStatus: { id: 'done', label: 'Done' },
+        worktreesById: new Map([
+          ['wt', { linkedClickUpTaskId: 'abc', linkedClickUpWorkspaceId: 'team-1' }]
+        ]),
+        getSettingsForWorktree: () => null,
+        getLatestWorkspaceStatus: () => 'done'
+      },
+      'wt',
+      deps
+    )
+    expect(deps.getClickUpTask).not.toHaveBeenCalled()
+    expect(deps.updateClickUpTask).not.toHaveBeenCalled()
+    expect(result).toEqual({
+      updated: 0,
+      skipped: 1,
+      failed: 0,
+      messages: [{ kind: 'owner-ambiguous', issueIdentifier: 'abc' }]
+    })
+  })
 })

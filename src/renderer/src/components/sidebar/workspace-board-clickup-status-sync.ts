@@ -25,7 +25,7 @@ type WorkspaceBoardClickUpStatusSyncArgs = {
     Pick<Worktree, 'linkedClickUpTaskId' | 'linkedClickUpWorkspaceId'>
   >
   settings?: RuntimeClickUpSettings
-  getSettingsForWorktree?: (worktreeId: string) => RuntimeClickUpSettings
+  getSettingsForWorktree?: (worktreeId: string) => RuntimeClickUpSettings | null
   getLatestWorkspaceStatus: (worktreeId: string) => WorkspaceStatus | null | undefined
 }
 
@@ -59,10 +59,17 @@ export async function syncClickUpWorktreeStatus(
     result.skipped += 1
     return result
   }
-  // Why: undefined intentionally routes through the local runtime when no owner-specific settings exist.
   const settings = args.getSettingsForWorktree
     ? args.getSettingsForWorktree(worktreeId)
-    : args.settings
+    : (args.settings ?? { kind: 'local' })
+  if (!settings) {
+    result.skipped += 1
+    result.messages.push({
+      kind: 'owner-ambiguous',
+      issueIdentifier: worktree.linkedClickUpTaskId
+    })
+    return result
+  }
   const workspaceId = worktree.linkedClickUpWorkspaceId ?? undefined
 
   try {
