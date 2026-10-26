@@ -1,4 +1,5 @@
 import { normalizeAgentNativeChatPermissionModes } from '../../../shared/agent-chat-permission-mode'
+import { legacyChatPermissionWrite } from './legacy-chat-permission-write'
 import { normalizeNativeChatAppearanceSettings } from '../../../shared/native-chat-appearance-settings'
 import type { GlobalSettings } from '../../../shared/global-settings-types'
 import { normalizeDisabledTuiAgents } from '../../../shared/tui-agent-selection'
@@ -58,6 +59,12 @@ export function sanitizeSettingsFieldUpdates(
   if ('nativeChatPermissionMode' in updates || 'agentNativeChatPermissionModes' in updates) {
     sanitizedUpdates.agentNativeChatPermissionModes = normalizeAgentNativeChatPermissionModes(
       updates.agentNativeChatPermissionModes
+    )
+  }
+  if ('nativeChatPermissionMode' in updates || 'agentPermissionDefault' in updates) {
+    Object.assign(
+      sanitizedUpdates,
+      legacyChatPermissionWrite(operations.state.settings, sanitizedUpdates)
     )
   }
   if ('nativeChatAppearance' in updates) {
