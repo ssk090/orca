@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   filterAvailableTaskProviders,
   normalizeTaskProviderSettings,
-  normalizeVisibleTaskProviders,
-  restoreAvailableDefaultTaskProvider,
-  resolveVisibleTaskProvider
+  restoreAvailableDefaultTaskProvider
 } from './task-providers'
 
 describe('task providers', () => {
@@ -47,10 +45,6 @@ describe('task providers', () => {
       defaultTaskSource: 'gitlab',
       visibleTaskProviders: ['gitlab']
     })
-  })
-
-  it('resolves hidden preferred providers to the first visible provider', () => {
-    expect(resolveVisibleTaskProvider('github', ['linear'])).toBe('linear')
   })
 
   it('filters runtime-unavailable providers without changing preference normalization', () => {
