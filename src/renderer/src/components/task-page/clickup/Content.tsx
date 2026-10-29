@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useAppStore } from '@/store'
-import type { TaskPageComposerActionsModel } from '../../use-task-page-composer-actions'
+import type { TaskPageComposerActionsModel } from '../use-task-page-composer-actions'
 import { ClickUpTaskPageSurface } from '@/components/ClickUpTaskPageSurface'
 import { normalizeTaskSourceContext } from '../../../../../shared/task-source-context'
 
