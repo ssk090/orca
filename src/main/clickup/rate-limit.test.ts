@@ -173,4 +173,37 @@ describe('ClickUp request limiter', () => {
     await assertion
     expect(send).toHaveBeenCalledTimes(1)
   })
+
+  it('drops a queued write unsent once its queue deadline passes', async () => {
+    const queue = new AbortController()
+    const send = vi.fn<() => Promise<Response>>().mockResolvedValue(response(200))
+    noteClickUpRateLimitHeaders(
+      new Headers({ 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': String(NOW / 1000 + 60) }),
+      NOW
+    )
+
+    const pending = sendWithClickUpRateLimitRetry(send, undefined, queue.signal)
+    const assertion = expect(pending).rejects.toThrow('queue deadline')
+    await vi.advanceTimersByTimeAsync(10)
+    queue.abort(new Error('queue deadline'))
+    await assertion
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('does not resend a rate-limited write after its queue deadline passes', async () => {
+    const queue = new AbortController()
+    const send = vi
+      .fn<() => Promise<Response>>()
+      .mockResolvedValueOnce(response(429, { 'retry-after': '30' }))
+      .mockResolvedValue(response(200))
+
+    const pending = sendWithClickUpRateLimitRetry(send, undefined, queue.signal)
+    const assertion = expect(pending).rejects.toThrow('queue deadline')
+    await vi.advanceTimersByTimeAsync(10)
+    queue.abort(new Error('queue deadline'))
+    await assertion
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(send).toHaveBeenCalledTimes(1)
+  })
 })

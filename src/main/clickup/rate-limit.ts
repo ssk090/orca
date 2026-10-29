@@ -203,12 +203,18 @@ export async function acquireClickUpRequestToken(signal?: AbortSignal | null): P
 
 // Sends a request through the shared bucket, retrying 429s after the server's
 // reset (or jittered exponential backoff) up to CLICKUP_MAX_RATE_LIMIT_RETRIES.
+// `queueSignal` bounds only the wait before each send: once it fires, the
+// request is dropped unsent instead of firing after its caller gave up.
 export async function sendWithClickUpRateLimitRetry(
   send: () => Promise<Response>,
-  signal?: AbortSignal | null
+  signal?: AbortSignal | null,
+  queueSignal?: AbortSignal | null
 ): Promise<Response> {
+  const waitSignal =
+    signal && queueSignal ? AbortSignal.any([signal, queueSignal]) : (signal ?? queueSignal)
   for (let attempt = 0; ; attempt += 1) {
-    await acquireClickUpRequestToken(signal)
+    await acquireClickUpRequestToken(waitSignal)
+    waitSignal?.throwIfAborted()
     const response = await send()
     if (response.status !== 429) {
       noteClickUpRateLimitHeaders(response.headers)

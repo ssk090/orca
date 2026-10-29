@@ -8,7 +8,10 @@ const CLICKUP_API_BASE_URL = 'https://api.clickup.com/api/v2'
 // Why: a small pool keeps fan-out (List hierarchy, search paging) from bursting
 // through ClickUp's per-token minute budget.
 const MAX_CONCURRENT = 3
-import { CLICKUP_REQUEST_TIMEOUT_MS } from '../../shared/clickup-timeouts'
+import {
+  CLICKUP_MAX_RATE_LIMIT_WAIT_MS,
+  CLICKUP_REQUEST_TIMEOUT_MS
+} from '../../shared/clickup-timeouts'
 
 let running = 0
 const queue: (() => void)[] = []
@@ -28,16 +31,27 @@ export class ClickUpApiError extends Error {
   }
 }
 
-export async function acquire(): Promise<void> {
+export async function acquire(signal?: AbortSignal | null): Promise<void> {
+  signal?.throwIfAborted()
   if (running < MAX_CONCURRENT) {
     running += 1
     return
   }
-  await new Promise<void>((resolve) => {
-    queue.push(() => {
+  await new Promise<void>((resolve, reject) => {
+    const grant = (): void => {
+      signal?.removeEventListener('abort', onAbort)
       running += 1
       resolve()
-    })
+    }
+    const onAbort = (): void => {
+      const index = queue.indexOf(grant)
+      if (index !== -1) {
+        queue.splice(index, 1)
+      }
+      reject(signal?.reason)
+    }
+    queue.push(grant)
+    signal?.addEventListener('abort', onAbort, { once: true })
   })
 }
 
@@ -70,7 +84,8 @@ function rateLimitMessage(): string {
 export async function requestWithToken<T>(
   token: string,
   path: string,
-  init?: RequestInit
+  init?: RequestInit,
+  queueSignal?: AbortSignal
 ): Promise<T> {
   const url = `${CLICKUP_API_BASE_URL}${path}`
   const httpClient = getMainHttpClient()
@@ -96,7 +111,8 @@ export async function requestWithToken<T>(
           ? AbortSignal.any([init.signal, AbortSignal.timeout(CLICKUP_REQUEST_TIMEOUT_MS)])
           : AbortSignal.timeout(CLICKUP_REQUEST_TIMEOUT_MS)
       }),
-    init?.signal
+    init?.signal,
+    queueSignal
   )
   if (response.status === 429) {
     throw new ClickUpApiError(rateLimitMessage(), 429)
@@ -116,11 +132,47 @@ export async function requestWithToken<T>(
 // or a remount) should spend one request, not two.
 const inFlightReads = new Map<string, Promise<unknown>>()
 
+function writeNotSentError(): ClickUpApiError {
+  return new ClickUpApiError(
+    'ClickUp is rate limited, so the change was not sent. Try again shortly.',
+    429
+  )
+}
+
 async function pooledRequest<T>(token: string, path: string, init?: RequestInit): Promise<T> {
-  await acquire()
+  // Why: a write's caller stops waiting after the queue budget plus one request
+  // timeout (CLICKUP_WRITE_CLIENT_TIMEOUT_MS). Dropping a write still queued
+  // past that budget keeps it from landing after the caller reported failure.
+  const isWrite = (init?.method ?? 'GET') !== 'GET'
+  const queueDeadline = isWrite ? new AbortController() : null
+  const queueTimer = queueDeadline
+    ? setTimeout(
+        () => queueDeadline.abort(new DOMException('ClickUp write queue expired', 'TimeoutError')),
+        CLICKUP_MAX_RATE_LIMIT_WAIT_MS
+      )
+    : null
+  queueTimer?.unref?.()
+  const queueSignal = queueDeadline?.signal
+  // Why identity: only the queue deadline's own reason means "never sent"; a
+  // send that started in time fails with its request timeout instead.
+  const notSent = (error: unknown): unknown =>
+    queueSignal?.aborted && error === queueSignal.reason ? writeNotSentError() : error
   try {
-    return await requestWithToken<T>(token, path, init)
+    await acquire(queueSignal)
+  } catch (error) {
+    if (queueTimer) {
+      clearTimeout(queueTimer)
+    }
+    throw notSent(error)
+  }
+  try {
+    return await requestWithToken<T>(token, path, init, queueSignal)
+  } catch (error) {
+    throw notSent(error)
   } finally {
+    if (queueTimer) {
+      clearTimeout(queueTimer)
+    }
     release()
   }
 }
