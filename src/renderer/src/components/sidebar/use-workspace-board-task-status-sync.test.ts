@@ -59,6 +59,6 @@ describe('clickUpSettingsForBoardWorktree', () => {
         },
         WORKTREE_ID
       )
-    ).toEqual(source)
+    ).toEqual({ activeRuntimeEnvironmentId: null })
   })
 })

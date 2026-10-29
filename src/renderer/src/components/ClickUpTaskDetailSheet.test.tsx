@@ -155,3 +155,29 @@ describe('ClickUp task saves', () => {
     expect(onTaskChanged).not.toHaveBeenCalled()
   })
 })
+
+describe('ClickUp comment draft', () => {
+  function renderSheet(current: ClickUpTask) {
+    return (
+      <ClickUpTaskDetailSheet
+        task={current}
+        sourceContext={null}
+        onClose={vi.fn()}
+        onStartWorkspace={vi.fn()}
+        onTaskChanged={vi.fn()}
+      />
+    )
+  }
+
+  it('keeps the draft on a same-task refresh and clears it for another task', () => {
+    const { rerender } = render(renderSheet(task))
+    const box = (): HTMLTextAreaElement => screen.getByPlaceholderText('Add a comment…')
+    fireEvent.change(box(), { target: { value: 'half typed' } })
+
+    rerender(renderSheet({ ...task, name: 'Refreshed name' }))
+    expect(box().value).toBe('half typed')
+
+    rerender(renderSheet({ ...task, id: 'other', url: 'https://app.clickup.com/t/other' }))
+    expect(box().value).toBe('')
+  })
+})

@@ -68,18 +68,23 @@ export function ClickUpTaskDetailSheet({
   taskRef.current = task
   const draftRef = useRef({ name, description, status, priority, dueDate })
   draftRef.current = { name, description, status, priority, dueDate }
+  const commentTaskIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!task) {
       return
     }
-    setComment('')
+    // Why: only a different task drops the comment draft; a same-task refresh
+    // (for example after a save) must keep what the user is typing.
+    if (commentTaskIdRef.current !== task.id) {
+      commentTaskIdRef.current = task.id
+      setComment('')
+    }
     setName(task.name)
     setDescription(task.description ?? '')
     setStatus(task.status.name)
     setPriority(task.priority ? String(task.priority.id) : 'none')
     setDueDate(dateInputValue(task.dueDate))
-    setComment('')
     setError(null)
     let cancelled = false
     void Promise.all([
