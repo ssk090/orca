@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   filterAvailableTaskProviders,
   normalizeTaskProviderSettings,
+  normalizeVisibleTaskProviders,
   restoreAvailableDefaultTaskProvider
 } from './task-providers'
 

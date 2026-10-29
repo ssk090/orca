@@ -38,6 +38,7 @@ export type QuickCreationRequestInput = {
   linkedClickUpTaskId: string | undefined
   linkedClickUpWorkspaceId: string | undefined
   branchNameOverride: string | undefined
+  branchIntent?: WorktreeCreationRequest['branchIntent']
   parentWorktreeId: string | null
   workspaceStatus: WorktreeCreationRequest['workspaceStatus']
   linkedGitLabMR: number | null
@@ -108,6 +109,7 @@ export function buildQuickCreationRequest(
       ? { linkedClickUpWorkspaceId: input.linkedClickUpWorkspaceId }
       : {}),
     ...(input.branchNameOverride ? { branchNameOverride: input.branchNameOverride } : {}),
+    ...(input.branchIntent ? { branchIntent: input.branchIntent } : {}),
     ...(input.parentWorktreeId ? { parentWorktreeId: input.parentWorktreeId } : {}),
     ...(input.workspaceStatus ? { workspaceStatus: input.workspaceStatus } : {}),
     ...(input.includeGitLabLinks && input.linkedGitLabMR != null

@@ -1,19 +1,49 @@
+import { publishSettingsUpdate } from './settings-update-effects'
+import { legacyChatPermissionWrite } from './legacy-chat-permission-write'
+import { stampDefaultOnMigrationGuards } from './default-on-migration-guards'
+import { normalizeNativeChatAppearanceSettings } from '../../../shared/native-chat/native-chat-appearance-settings'
 import type { GlobalSettings } from '../../../shared/global-settings-types'
-import { notifyListenersForSettingsChanges } from './settings-update-notify'
-import { sanitizeSettingsFieldUpdates } from './settings-update-sanitize'
+import { normalizeDisabledTuiAgents } from '../../../shared/tui-agent-selection'
+import { normalizeNativeChatProviderChoices } from '../../../shared/native-chat/native-chat-providers'
+import { resolveNestedWorkerMaxDepth } from '../../../shared/nested-worker-depth'
+import { resolveOrchestrationHeartbeatInterval } from '../../../shared/orchestration-heartbeat'
+import { sanitizeAgentLaunchProfileUpdates } from '../../../shared/tui-agent-launch-defaults'
+import { normalizeTerminalQuickCommands } from '../../../shared/terminal-quick-commands'
+import { assertTerminalQuickCommandsStorable } from '../../../shared/terminal-quick-command-prompt-limit'
+import { normalizeTerminalCustomThemes } from '../../../shared/terminal-custom-themes'
+import { normalizePluginOwnedSettings } from '../../../shared/plugins/capabilities/plugin-owned-settings'
+import { normalizeTerminalDefaultShell } from '../../../shared/terminal-default-shell'
+import { normalizeTerminalCursorStyleDefault } from '../../../shared/terminal-cursor-style-settings'
+import { normalizeDesktopTerminalScrollbackRows } from '../../../shared/terminal-scrollback-policy'
+import { normalizeTerminalMinimumContrastRatio } from '../../../shared/terminal-minimum-contrast-settings'
+import { normalizeTaskProviderSettings } from '../../../shared/task-providers'
+import { normalizeOpenInApplications } from '../../../shared/open-in-applications'
+import { normalizeTerminalShortcutPolicy } from '../../../shared/keybindings'
+import { normalizeSourceControlGroupOrder } from '../../../shared/source-control-group-order'
+import { normalizeAppIconId } from '../../../shared/app-icon'
+import { normalizeUiLanguage } from '../../../shared/ui-language'
+import { normalizeWorktreeVisibilityDefaults } from '../../../shared/external-worktree-visibility'
+import { normalizePRBotAuthorOverrides } from '../../../shared/pr-bot-author-overrides'
+import { normalizeMachineName } from '../../../shared/machine-name'
 import type { PersistedState } from '../../../shared/persisted-state-types'
+import {
+  addMobilePairingCustomAddress,
+  normalizeMobilePairingCustomAddress,
+  normalizeMobilePairingCustomAddresses
+} from '../../../shared/mobile-pairing-custom-address'
 import {
   mergeLegacyCommitMessageAiIntoSourceControlAi,
   normalizeSourceControlAiSettings,
   projectSourceControlAiToLegacyCommitMessageAi
 } from '../../../shared/source-control-ai'
-import {
-  PROTECTED_SECRET_SLOT,
-  type ProtectedSecretPersistence
-} from '../../protected-secret-persistence'
+import type { ProtectedSecretPersistence } from '../../protected-secret-persistence'
 import { normalizeNotificationSettings } from './onboarding-normalization'
 import { retireLegacyInstructionsForClearedTextActionRecipes } from './source-control-settings'
-import { stripRetiredGlobalSettings } from './terminal-settings-migrations'
+import {
+  buildWorkspaceDirHistoryForUpdate,
+  expandWorkspaceDirHome,
+  stripRetiredGlobalSettings
+} from './terminal-settings-migrations'
 
 export type SettingsMutationOperations = {
   state: PersistedState
@@ -28,8 +58,180 @@ export function updateSettings(
   updates: Partial<GlobalSettings>,
   options: { notifyListeners?: boolean; originWebContentsId?: number } = {}
 ): GlobalSettings {
-  const sanitizedUpdates = stripRetiredGlobalSettings(updates)
-  sanitizeSettingsFieldUpdates(operations, updates, sanitizedUpdates)
+  const sanitizedUpdates = expandWorkspaceDirHome(stripRetiredGlobalSettings(updates))
+  const linkBehavior = updates.terminalLinkClickBehavior
+  if (linkBehavior === 'actions' || linkBehavior === 'open' || linkBehavior === 'none') {
+    // Loaded defaults are ambiguous; synchronize the legacy switch only on an explicit write.
+    sanitizedUpdates.terminalLinkActionPopoverEnabled = linkBehavior === 'actions'
+  }
+  // Normalize at the store boundary so every writer rejects truthy non-booleans.
+  if ('minimizeToTrayOnClose' in updates) {
+    sanitizedUpdates.minimizeToTrayOnClose = updates.minimizeToTrayOnClose === true
+  }
+  if ('showMenuBarIcon' in updates) {
+    sanitizedUpdates.showMenuBarIcon = updates.showMenuBarIcon === true
+  }
+  if ('artifactSharingEnabled' in updates) {
+    sanitizedUpdates.artifactSharingEnabled = updates.artifactSharingEnabled === true
+  }
+  if ('agentSkillSharingEnabled' in updates) {
+    sanitizedUpdates.agentSkillSharingEnabled = updates.agentSkillSharingEnabled === true
+  }
+  if ('nestedWorkerMaxDepth' in updates) {
+    sanitizedUpdates.nestedWorkerMaxDepth = resolveNestedWorkerMaxDepth({
+      nestedWorkerMaxDepth: updates.nestedWorkerMaxDepth
+    })
+  }
+  if ('orchestrationHeartbeatIntervalMinutes' in updates) {
+    sanitizedUpdates.orchestrationHeartbeatIntervalMinutes = resolveOrchestrationHeartbeatInterval({
+      orchestrationHeartbeatIntervalMinutes: updates.orchestrationHeartbeatIntervalMinutes
+    })
+  }
+  if ('nativeChatAppearance' in updates) {
+    sanitizedUpdates.nativeChatAppearance = normalizeNativeChatAppearanceSettings(
+      updates.nativeChatAppearance
+    )
+  }
+  if ('disabledTuiAgents' in updates) {
+    sanitizedUpdates.disabledTuiAgents = normalizeDisabledTuiAgents(updates.disabledTuiAgents)
+  }
+  if ('nativeChatProviders' in updates) {
+    sanitizedUpdates.nativeChatProviders = normalizeNativeChatProviderChoices(
+      updates.nativeChatProviders
+    )
+  }
+  if ('worktreeVisibilityDefaults' in updates) {
+    sanitizedUpdates.worktreeVisibilityDefaults = {
+      ...operations.state.settings.worktreeVisibilityDefaults,
+      ...(normalizeWorktreeVisibilityDefaults(updates.worktreeVisibilityDefaults) ?? {
+        external: 'hide'
+      })
+    }
+  }
+  sanitizeAgentLaunchProfileUpdates(sanitizedUpdates, updates)
+  if ('nativeChatPermissionMode' in updates || 'agentPermissionDefault' in updates) {
+    Object.assign(
+      sanitizedUpdates,
+      legacyChatPermissionWrite(operations.state.settings, sanitizedUpdates)
+    )
+  }
+  if ('terminalQuickCommands' in updates) {
+    const terminalQuickCommands = normalizeTerminalQuickCommands(updates.terminalQuickCommands)
+    assertTerminalQuickCommandsStorable(terminalQuickCommands)
+    sanitizedUpdates.terminalQuickCommands = terminalQuickCommands
+  }
+  if ('terminalDefaultShell' in updates) {
+    sanitizedUpdates.terminalDefaultShell = normalizeTerminalDefaultShell(
+      updates.terminalDefaultShell
+    )
+  }
+  if ('terminalCustomThemes' in updates) {
+    sanitizedUpdates.terminalCustomThemes = normalizeTerminalCustomThemes(
+      updates.terminalCustomThemes
+    )
+  }
+  Object.assign(sanitizedUpdates, normalizePluginOwnedSettings(updates))
+  if ('terminalCursorStyle' in updates) {
+    Object.assign(
+      sanitizedUpdates,
+      normalizeTerminalCursorStyleDefault(
+        { terminalCursorStyle: updates.terminalCursorStyle },
+        { preserveExplicitValue: true }
+      )
+    )
+  }
+  if ('terminalScrollbackRows' in updates) {
+    sanitizedUpdates.terminalScrollbackRows = normalizeDesktopTerminalScrollbackRows(
+      updates.terminalScrollbackRows
+    )
+  }
+  // All writers pass here; preserve undefined as automatic and bound explicit xterm ratios.
+  if ('terminalMinimumContrastRatio' in updates) {
+    sanitizedUpdates.terminalMinimumContrastRatio = normalizeTerminalMinimumContrastRatio(
+      updates.terminalMinimumContrastRatio
+    )
+  }
+  if ('visibleTaskProviders' in updates || 'defaultTaskSource' in updates) {
+    const taskProviderSettings = normalizeTaskProviderSettings({
+      visibleTaskProviders:
+        'visibleTaskProviders' in updates
+          ? updates.visibleTaskProviders
+          : operations.state.settings.visibleTaskProviders,
+      defaultTaskSource:
+        'defaultTaskSource' in updates
+          ? updates.defaultTaskSource
+          : operations.state.settings.defaultTaskSource
+    })
+    sanitizedUpdates.defaultTaskSource = taskProviderSettings.defaultTaskSource
+    sanitizedUpdates.visibleTaskProviders = taskProviderSettings.visibleTaskProviders
+    if ('visibleTaskProviders' in updates) {
+      sanitizedUpdates.visibleTaskProvidersDefaultedForJira = true
+      sanitizedUpdates.visibleTaskProvidersDefaultedForClickUp = true
+    }
+  }
+  stampDefaultOnMigrationGuards(updates, sanitizedUpdates)
+  if ('openInApplications' in updates) {
+    sanitizedUpdates.openInApplications = normalizeOpenInApplications(updates.openInApplications)
+  }
+  if ('terminalShortcutPolicy' in updates) {
+    sanitizedUpdates.terminalShortcutPolicy = normalizeTerminalShortcutPolicy(
+      updates.terminalShortcutPolicy
+    )
+  }
+  if ('sourceControlGroupOrder' in updates) {
+    sanitizedUpdates.sourceControlGroupOrder = normalizeSourceControlGroupOrder(
+      updates.sourceControlGroupOrder
+    )
+  }
+  if ('appIcon' in updates) {
+    sanitizedUpdates.appIcon = normalizeAppIconId(updates.appIcon)
+  }
+  if ('uiLanguage' in updates) {
+    sanitizedUpdates.uiLanguage = normalizeUiLanguage(updates.uiLanguage)
+  }
+  if ('prBotAuthorOverrides' in updates) {
+    sanitizedUpdates.prBotAuthorOverrides = normalizePRBotAuthorOverrides(
+      updates.prBotAuthorOverrides
+    )
+  }
+  if ('machineName' in updates) {
+    sanitizedUpdates.machineName = normalizeMachineName(updates.machineName)
+  }
+  if ('mobilePairingCustomAddress' in updates) {
+    sanitizedUpdates.mobilePairingCustomAddress = normalizeMobilePairingCustomAddress(
+      updates.mobilePairingCustomAddress
+    )
+  }
+  if ('mobilePairingCustomAddresses' in updates) {
+    sanitizedUpdates.mobilePairingCustomAddresses = normalizeMobilePairingCustomAddresses(
+      updates.mobilePairingCustomAddresses
+    )
+  }
+  if (
+    'mobilePairingCustomAddress' in sanitizedUpdates ||
+    'mobilePairingCustomAddresses' in sanitizedUpdates
+  ) {
+    const mobilePairingCustomAddress =
+      'mobilePairingCustomAddress' in sanitizedUpdates
+        ? sanitizedUpdates.mobilePairingCustomAddress
+        : operations.state.settings.mobilePairingCustomAddress
+    if (mobilePairingCustomAddress) {
+      sanitizedUpdates.mobilePairingCustomAddresses = addMobilePairingCustomAddress(
+        sanitizedUpdates.mobilePairingCustomAddresses ??
+          operations.state.settings.mobilePairingCustomAddresses ??
+          [],
+        mobilePairingCustomAddress
+      )
+    }
+  }
+  const historyWithPreviousLayout = buildWorkspaceDirHistoryForUpdate(
+    operations.state.settings,
+    sanitizedUpdates
+  )
+  if (historyWithPreviousLayout) {
+    sanitizedUpdates.workspaceDirHistory = historyWithPreviousLayout
+  }
+  // Partial telemetry updates must preserve siblings such as installId.
   const mergedTelemetry =
     sanitizedUpdates.telemetry !== undefined
       ? { ...operations.state.settings.telemetry, ...sanitizedUpdates.telemetry }
@@ -64,29 +266,6 @@ export function updateSettings(
     }),
     ...(mergedTelemetry !== undefined ? { telemetry: mergedTelemetry } : {})
   }
-  if ('opencodeSessionCookie' in updates && !updates.opencodeSessionCookie) {
-    operations.removeRetainedBlob(PROTECTED_SECRET_SLOT.opencodeSessionCookie)
-  }
-  if ('httpProxyUrl' in updates && !updates.httpProxyUrl) {
-    operations.removeRetainedBlob(PROTECTED_SECRET_SLOT.httpProxyUrl)
-  }
-  if (
-    !Object.is(
-      previousSettings.localWindowsRuntimeDefault,
-      operations.state.settings.localWindowsRuntimeDefault
-    )
-  ) {
-    for (const repoId of new Set(operations.state.repos.map(({ id }) => id))) {
-      operations.bumpLocalWorktreeScanGeneration(repoId)
-    }
-  }
-  operations.scheduleSave()
-  notifyListenersForSettingsChanges(
-    operations,
-    previousSettings,
-    sanitizedUpdates,
-    options.notifyListeners === true,
-    options.originWebContentsId
-  )
+  publishSettingsUpdate(operations, updates, sanitizedUpdates, previousSettings, options)
   return operations.state.settings
 }

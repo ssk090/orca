@@ -6,7 +6,7 @@ import type {
   NeedsSetupProjectHostOption,
   ProjectHostSetupOption
 } from '@/lib/project-host-setup-options'
-import type { SetupConfig } from '@/lib/new-workspace'
+import type { SetupConfig } from '../../../../shared/orca-hook-setup-config'
 import type { WorkspaceCreateErrorDisplay } from '@/lib/workspace-create-error-format'
 import type { SmartNameMode } from '../../../../shared/new-workspace/smart-workspace-source-results'
 import type SmartWorkspaceNameField from './SmartWorkspaceNameField'
@@ -97,9 +97,11 @@ export type NewWorkspaceComposerCardProps = {
   onSmartClickUpTaskSelect?: (task: ClickUpTask, sourceContext: TaskSourceContext) => void
   smartNameSelection: SmartWorkspaceNameSelection | null
   onClearSmartNameSelection: () => void
+  reuseEligibleBranch?: string | null
   canReuseSelectedBranch: boolean
   reuseSelectedBranch: boolean
   onReuseSelectedBranchChange: (next: boolean) => void
+  onOpenSelectedBranchWorkspace?: () => void
   showCreateMultiple?: boolean
   createMultiple?: boolean
   onCreateMultipleChange?: (next: boolean) => void

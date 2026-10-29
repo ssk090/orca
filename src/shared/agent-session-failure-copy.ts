@@ -78,6 +78,10 @@ export const AGENT_SESSION_FAILURE_COPY = {
     "{{agent}}'s Command in Settings → Agents must be a program path or name Orca can find, with no arguments or variables. Change it or reset it.",
   runtimeNotInstalled:
     "{{agent}} isn't installed on the computer running this chat. Install it from the chat in a current version of Orca.",
+  fullAccessAsRoot:
+    "{{agent}} won't use Full access while it runs as root. Choose another permission for {{agent}} in Settings → Agents for the computer running this chat, then start a new chat.",
+  launchPreparationFailed:
+    "Orca couldn't prepare {{agent}} to start on the computer running this chat.",
   conversationOpenElsewhere:
     'Codex is still holding this conversation open. Try again in a moment, or close other Codex terminals.',
   conversationOpenInTerminal:
@@ -92,6 +96,8 @@ export const AGENT_SESSION_FAILURE_COPY = {
   providerExitedRejection: '{{agent}} stopped before this message was sent.',
   providerExitedAnswer:
     '{{agent}} has stopped, so your answer was not sent. Send a message to continue.',
+  claudeEffortInvalid:
+    'Claude effort is invalid; choose low, medium, high, xhigh, or max and send again.',
   providerRejected: "{{agent}} didn't accept this message.",
   providerRejectedQuoted: "{{agent}} didn't accept this message: {{detail}}.",
   attachmentEmpty: 'An image on this message is empty, so the message was not sent.',
