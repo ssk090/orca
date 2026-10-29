@@ -32,7 +32,7 @@ import {
   SheetHeader,
   SheetTitle
 } from '@/components/ui/sheet'
-import { translate } from '@/i18n/i18n'
+import { getIntlLocale, translate } from '@/i18n/i18n'
 
 function dateInputValue(value: string | null | undefined): string {
   return value?.slice(0, 10) ?? ''
@@ -69,6 +69,9 @@ export function ClickUpTaskDetailSheet({
   const draftRef = useRef({ name, description, status, priority, dueDate })
   draftRef.current = { name, description, status, priority, dueDate }
   const commentTaskIdRef = useRef<string | null>(null)
+  // Why: each comment submission owns the pending state; a task switch or a
+  // newer submission bumps this, so a late result can't touch the current one.
+  const commentSubmissionRef = useRef(0)
 
   useEffect(() => {
     if (!task) {
@@ -78,7 +81,9 @@ export function ClickUpTaskDetailSheet({
     // (for example after a save) must keep what the user is typing.
     if (commentTaskIdRef.current !== task.id) {
       commentTaskIdRef.current = task.id
+      commentSubmissionRef.current += 1
       setComment('')
+      setCommenting(false)
     }
     setName(task.name)
     setDescription(task.description ?? '')
@@ -188,16 +193,21 @@ export function ClickUpTaskDetailSheet({
     }
     setCommenting(true)
     setError(null)
+    const submission = ++commentSubmissionRef.current
+    const isCurrent = (): boolean => commentSubmissionRef.current === submission
     const taskId = task.id
     const result = await clickUpAddTaskComment(
       sourceContext,
-      task.id,
+      taskId,
       comment.trim(),
       task.workspaceId
     ).catch((cause: unknown) => ({
       ok: false as const,
       error: cause instanceof Error ? cause.message : 'Comment failed.'
     }))
+    if (!isCurrent()) {
+      return
+    }
     if (!result.ok) {
       setCommenting(false)
       setError(result.error)
@@ -205,18 +215,16 @@ export function ClickUpTaskDetailSheet({
     }
     try {
       const nextComments = await clickUpTaskComments(sourceContext, taskId, task.workspaceId)
-      if (taskRef.current?.id !== taskId) {
-        return
+      if (isCurrent()) {
+        setComments(nextComments)
+        setComment('')
       }
-      setComments(nextComments)
-      setComment('')
     } catch (cause: unknown) {
-      if (taskRef.current?.id !== taskId) {
-        return
+      if (isCurrent()) {
+        setError(cause instanceof Error ? cause.message : 'Failed to reload comments.')
       }
-      setError(cause instanceof Error ? cause.message : 'Failed to reload comments.')
     } finally {
-      if (taskRef.current?.id === taskId) {
+      if (isCurrent()) {
         setCommenting(false)
       }
     }
@@ -350,7 +358,7 @@ export function ClickUpTaskDetailSheet({
                               'ClickUp user'
                             )}
                         </span>
-                        <span>{new Date(item.createdAt).toLocaleString()}</span>
+                        <span>{new Date(item.createdAt).toLocaleString(getIntlLocale())}</span>
                       </div>
                       <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
                         {item.body}

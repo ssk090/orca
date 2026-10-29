@@ -9,13 +9,14 @@ import { ClickUpTaskDetailSheet } from './ClickUpTaskDetailSheet'
 const mocks = vi.hoisted(() => ({
   update: vi.fn(),
   patch: vi.fn(),
-  refresh: vi.fn()
+  refresh: vi.fn(),
+  addComment: vi.fn()
 }))
 vi.mock('@/runtime/runtime-clickup-client', () => ({
   clickUpUpdateTask: mocks.update,
   clickUpListLists: vi.fn().mockResolvedValue([]),
   clickUpTaskComments: vi.fn().mockResolvedValue([]),
-  clickUpAddTaskComment: vi.fn()
+  clickUpAddTaskComment: mocks.addComment
 }))
 vi.mock('@/store', () => ({
   useAppStore: (selector: (state: unknown) => unknown) =>
@@ -179,5 +180,36 @@ describe('ClickUp comment draft', () => {
 
     rerender(renderSheet({ ...task, id: 'other', url: 'https://app.clickup.com/t/other' }))
     expect(box().value).toBe('')
+  })
+
+  it('releases the pending comment on a task switch without letting a late result clear a newer one', async () => {
+    const pending: ((value: { ok: true }) => void)[] = []
+    mocks.addComment.mockImplementation(
+      () => new Promise<{ ok: true }>((resolve) => pending.push(resolve))
+    )
+    const { rerender } = render(renderSheet(task))
+    const box = (): HTMLTextAreaElement => screen.getByPlaceholderText('Add a comment…')
+    const button = (): HTMLButtonElement => screen.getByRole('button', { name: 'Add comment' })
+
+    fireEvent.change(box(), { target: { value: 'on A' } })
+    fireEvent.click(button())
+    await waitFor(() => expect(button().disabled).toBe(true))
+
+    rerender(renderSheet({ ...task, id: 'other', url: 'https://app.clickup.com/t/other' }))
+    fireEvent.change(box(), { target: { value: 'on B' } })
+    expect(button().disabled).toBe(false)
+
+    fireEvent.click(button())
+    await waitFor(() => expect(button().disabled).toBe(true))
+    pending[0]({ ok: true })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    // A's late success must not release or clear B's own pending comment.
+    expect(button().disabled).toBe(true)
+    expect(box().value).toBe('on B')
+
+    pending[1]({ ok: true })
+    await waitFor(() => expect(box().value).toBe(''))
+    fireEvent.change(box(), { target: { value: 'next on B' } })
+    expect(button().disabled).toBe(false)
   })
 })
