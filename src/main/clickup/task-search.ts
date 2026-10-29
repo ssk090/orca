@@ -247,11 +247,13 @@ export async function searchClickUpTasks(
   const safeLimit = Math.min(Math.max(1, limit), MAX_SEARCH_RESULTS)
   const clients = requireClickUpClients(workspaceId)
   const exact = await lookupExactTask(clients, trimmed)
-  if (exact.length > 0) {
-    return exact
-      .map((match) => match.task)
-      .filter((task) => clickUpTaskMatchesScope(task, taskScope))
-      .slice(0, safeLimit)
+  const scopedExact = exact
+    .map((match) => match.task)
+    .filter((task) => clickUpTaskMatchesScope(task, taskScope))
+  // Why fall through: the scope check reads the task's home List, but a
+  // single-List scan includes tasks added from other Lists (include_timl).
+  if (scopedExact.length > 0) {
+    return scopedExact.slice(0, safeLimit)
   }
   const viewerId = getStatus().viewer?.id
   const scanned = await Promise.all(
