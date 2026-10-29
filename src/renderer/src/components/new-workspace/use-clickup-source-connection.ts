@@ -2,11 +2,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { clickUpStatus } from '@/runtime/runtime-clickup-client'
 import {
   getTaskSourceCacheScope,
-  getTaskSourceRuntimeSettings,
   type TaskSourceContext
 } from '../../../../shared/task-source-context'
 import type { ClickUpConnectionStatus } from '../../../../shared/clickup-types'
-import { getProviderRuntimeContextKey } from '@/lib/provider-runtime-context'
+import { getHostRuntimeContextKey } from '@/lib/provider-runtime-context'
 
 export type ClickUpSourceConnection = {
   status: ClickUpConnectionStatus | null
@@ -24,10 +23,7 @@ export function useClickUpSourceConnection(args: {
     [args.sourceContext]
   )
   const revisionKey = useMemo(
-    () =>
-      args.sourceContext
-        ? getProviderRuntimeContextKey(getTaskSourceRuntimeSettings(args.sourceContext))
-        : null,
+    () => (args.sourceContext ? getHostRuntimeContextKey(args.sourceContext.hostId) : null),
     [args.sourceContext]
   )
   const loadKey = contextKey && revisionKey ? `${contextKey}::${revisionKey}` : null

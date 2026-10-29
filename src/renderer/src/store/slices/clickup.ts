@@ -11,10 +11,12 @@ import {
   clickUpStatus,
   clickUpTestConnection
 } from '@/runtime/runtime-clickup-client'
-import { getProviderRuntimeContextKey } from '@/lib/provider-runtime-context'
+import {
+  getHostRuntimeContextKey,
+  getProviderRuntimeContextKey
+} from '@/lib/provider-runtime-context'
 import {
   getTaskSourceCacheScope,
-  getTaskSourceRuntimeSettings,
   type TaskSourceContext
 } from '../../../../shared/task-source-context'
 import { patchClickUpCaches } from './clickup-task-cache-patch'
@@ -34,6 +36,8 @@ const taskInflight = new Map<string, Promise<ClickUpTask | null>>()
 type ClickUpReadScope = {
   settings: AppState['settings'] | TaskSourceContext | null
   contextKey: string
+  /** Runtime-only key, in the same format as clickUpStatusContextKey. */
+  runtimeKey: string
   cachePrefix: string | null
   explicitSource: boolean
 }
@@ -43,17 +47,20 @@ function getReadScope(
   sourceContext?: TaskSourceContext | null
 ): ClickUpReadScope {
   if (!sourceContext) {
+    const runtimeKey = getProviderRuntimeContextKey(settings)
     return {
       settings,
-      contextKey: getProviderRuntimeContextKey(settings),
+      contextKey: runtimeKey,
+      runtimeKey,
       cachePrefix: null,
       explicitSource: false
     }
   }
-  const runtimeSettings = getTaskSourceRuntimeSettings(sourceContext)
+  const runtimeKey = getHostRuntimeContextKey(sourceContext.hostId)
   return {
     settings: sourceContext,
-    contextKey: `${getProviderRuntimeContextKey(runtimeSettings)}::${getTaskSourceCacheScope(sourceContext)}`,
+    contextKey: `${runtimeKey}::${getTaskSourceCacheScope(sourceContext)}`,
+    runtimeKey,
     cachePrefix: getTaskSourceCacheScope(sourceContext),
     explicitSource: true
   }
@@ -70,7 +77,9 @@ function workspaceSelectionForScope(
   if (!scope.explicitSource) {
     return selectedWorkspaceId(state.clickUpStatus)
   }
-  if (state.clickUpStatusContextKey === scope.contextKey) {
+  // Why the runtime key: the status belongs to a runtime, while contextKey
+  // also carries the task-source cache scope and would never match it.
+  if (state.clickUpStatusContextKey === scope.runtimeKey) {
     return selectedWorkspaceId(state.clickUpStatus)
   }
   return null

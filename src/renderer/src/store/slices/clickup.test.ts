@@ -219,4 +219,25 @@ describe('createClickUpSlice', () => {
 
     expect(store.getState().clickUpStatusContextKey).not.toBeNull()
   })
+
+  it("uses the status Workspace for an explicit source on the status's runtime", async () => {
+    clickUpSearchTasks.mockResolvedValue([])
+    const store = createTestStore()
+    store.setState({
+      settings: { ...getDefaultSettings('/tmp'), activeRuntimeEnvironmentId: 'remote' },
+      clickUpStatus: { connected: true, viewer: null, selectedWorkspaceId: 'team-9' }
+    })
+    clickUpStatus.mockResolvedValue({
+      connected: true,
+      viewer: null,
+      selectedWorkspaceId: 'team-9'
+    })
+    await store.getState().checkClickUpConnection(true)
+
+    await store.getState().searchClickUpTasks('bug', 5, { sourceContext: sourceContext('remote') })
+    await store.getState().searchClickUpTasks('bug', 5, { sourceContext: sourceContext('other') })
+
+    expect(clickUpSearchTasks.mock.calls[0]?.[3]).toBe('team-9')
+    expect(clickUpSearchTasks.mock.calls[1]?.[3]).toBeNull()
+  })
 })
