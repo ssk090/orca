@@ -10,6 +10,7 @@ import { isClickUpTaskFilter } from '../../../shared/clickup-task-filter'
 import type { TaskSourceContext } from '../../../shared/task-source-context'
 import type { LinkedWorkItemSummary } from '@/lib/new-workspace'
 import { getLinkedWorkItemSuggestedName } from '../../../shared/workspace-name'
+import { buildClickUpWorkspaceSource } from '../../../shared/new-workspace/workspace-source'
 import { useAppStore } from '@/store'
 import { ClickUpIcon } from '@/components/icons/ClickUpIcon'
 import { ClickUpApiTokenDialog } from '@/components/clickup-api-token-dialog'
@@ -163,13 +164,10 @@ export function ClickUpTaskPageSurface({
 
   const handleStartWorkspace = useCallback(
     (task: ClickUpTask) => {
+      const workspaceSource = buildClickUpWorkspaceSource(task)
       const linkedWorkItem: LinkedWorkItemSummary = {
-        provider: 'clickup',
-        type: 'issue',
-        number: 0,
+        ...workspaceSource,
         title: `${clickUpTaskReference(task)} ${task.name}`,
-        url: task.url,
-        clickupIdentifier: task.id,
         clickupWorkspaceId: task.workspaceId,
         linkedContext: {
           provider: 'clickup',

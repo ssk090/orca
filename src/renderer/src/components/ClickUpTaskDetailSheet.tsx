@@ -73,11 +73,13 @@ export function ClickUpTaskDetailSheet({
     if (!task) {
       return
     }
+    setComment('')
     setName(task.name)
     setDescription(task.description ?? '')
     setStatus(task.status.name)
     setPriority(task.priority ? String(task.priority.id) : 'none')
     setDueDate(dateInputValue(task.dueDate))
+    setComment('')
     setError(null)
     let cancelled = false
     void Promise.all([
@@ -87,7 +89,7 @@ export function ClickUpTaskDetailSheet({
       clickUpTaskComments(sourceContext, task.id, task.workspaceId)
     ])
       .then(([nextLists, nextComments]) => {
-        if (!cancelled) {
+        if (!cancelled && taskRef.current?.id === task.id) {
           setLists(nextLists)
           setComments(nextComments)
         }
@@ -181,6 +183,7 @@ export function ClickUpTaskDetailSheet({
     }
     setCommenting(true)
     setError(null)
+    const taskId = task.id
     const result = await clickUpAddTaskComment(
       sourceContext,
       task.id,
@@ -196,13 +199,21 @@ export function ClickUpTaskDetailSheet({
       return
     }
     try {
-      const nextComments = await clickUpTaskComments(sourceContext, task.id, task.workspaceId)
+      const nextComments = await clickUpTaskComments(sourceContext, taskId, task.workspaceId)
+      if (taskRef.current?.id !== taskId) {
+        return
+      }
       setComments(nextComments)
       setComment('')
     } catch (cause: unknown) {
+      if (taskRef.current?.id !== taskId) {
+        return
+      }
       setError(cause instanceof Error ? cause.message : 'Failed to reload comments.')
     } finally {
-      setCommenting(false)
+      if (taskRef.current?.id === taskId) {
+        setCommenting(false)
+      }
     }
   }
 

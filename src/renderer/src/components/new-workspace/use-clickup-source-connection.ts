@@ -35,9 +35,10 @@ export function useClickUpSourceConnection(args: {
   useLayoutEffect(() => {
     sourceContextRef.current = args.sourceContext
   })
-  const [state, setState] = useState<{ loadKey: string | null; status: ClickUpConnectionStatus | null }>(
-    { loadKey: null, status: null }
-  )
+  const [state, setState] = useState<{
+    loadKey: string | null
+    status: ClickUpConnectionStatus | null
+  }>({ loadKey: null, status: null })
 
   useEffect(() => {
     const sourceContext = sourceContextRef.current

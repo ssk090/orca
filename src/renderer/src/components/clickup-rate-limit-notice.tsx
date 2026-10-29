@@ -7,6 +7,21 @@ const IDLE_STATE: ClickUpRateLimitState = { pausedUntil: null, rateLimited: fals
 
 // Shows the main process's shared ClickUp pause so a paced or rate-limited
 // queue reads as "waiting", not as a hang.
+function normalizeRateLimitState(value: unknown): ClickUpRateLimitState {
+  if (
+    value &&
+    typeof value === 'object' &&
+    'pausedUntil' in value &&
+    (value.pausedUntil === null || typeof value.pausedUntil === 'number')
+  ) {
+    return {
+      pausedUntil: value.pausedUntil,
+      rateLimited: 'rateLimited' in value && value.rateLimited === true
+    }
+  }
+  return IDLE_STATE
+}
+
 export function ClickUpRateLimitNotice(): React.JSX.Element | null {
   const [state, setState] = useState<ClickUpRateLimitState>(IDLE_STATE)
   const [now, setNow] = useState(() => Date.now())
@@ -22,11 +37,13 @@ export function ClickUpRateLimitNotice(): React.JSX.Element | null {
       .rateLimitState()
       .then((initial) => {
         if (!disposed) {
-          setState(initial)
+          setState(normalizeRateLimitState(initial))
         }
       })
       .catch(() => undefined)
-    const unsubscribe = api.onRateLimitStateChange(setState)
+    const unsubscribe = api.onRateLimitStateChange((next) =>
+      setState(normalizeRateLimitState(next))
+    )
     return () => {
       disposed = true
       unsubscribe()

@@ -8,7 +8,7 @@ import type {
 } from '../../shared/clickup-types'
 import type { RuntimeWorktreeRecord } from '../../shared/runtime-types'
 import { isClickUpTaskFilter } from '../../shared/clickup-task-filter'
-import { parseClickUpTaskReference } from '../clickup-task-reference'
+import { parseClickUpTaskTarget } from '../clickup-task-reference'
 import type { CommandHandler } from '../dispatch'
 import { printResult } from '../format'
 import {
@@ -16,7 +16,7 @@ import {
   getOptionalStringFlag,
   getRequiredStringFlag
 } from '../flags'
-import { RuntimeClientError } from '../runtime-client'
+import { RuntimeClientError, type RuntimeRpcSuccess } from '../runtime-client'
 import { resolveCurrentWorktreeSelector } from '../selectors'
 import {
   formatClickUpCreate,
@@ -41,14 +41,17 @@ async function resolveTaskTarget({
   }
   const explicitWorkspaceId = getOptionalStringFlag(flags, 'workspace')
   if (input) {
-    const taskId = parseClickUpTaskReference(input)
-    if (!taskId) {
+    const target = parseClickUpTaskTarget(input)
+    if (!target) {
       throw new RuntimeClientError(
         'invalid_argument',
         'Pass a ClickUp task ID or an https://app.clickup.com/t URL.'
       )
     }
-    return { taskId, ...(explicitWorkspaceId ? { workspaceId: explicitWorkspaceId } : {}) }
+    return {
+      taskId: target.taskId,
+      workspaceId: explicitWorkspaceId ?? target.workspaceId
+    }
   }
   if (!current) {
     throw new RuntimeClientError('invalid_argument', 'Pass a ClickUp task id or --current.')
@@ -116,6 +119,24 @@ function getDueDate(flags: Map<string, string | boolean>, name: string): string 
   return value
 }
 
+function assertClickUpMutationOk(response: RuntimeRpcSuccess<ClickUpMutationResult>): void {
+  if (!response.result.ok) {
+    throw new RuntimeClientError(
+      'clickup_write_failed',
+      response.result.error ?? 'ClickUp did not confirm the change.'
+    )
+  }
+}
+
+function assertClickUpCreateOk(response: RuntimeRpcSuccess<ClickUpCreateTaskResult>): void {
+  if (!response.result.ok) {
+    throw new RuntimeClientError(
+      'clickup_write_failed',
+      response.result.error ?? 'ClickUp did not create the task.'
+    )
+  }
+}
+
 async function updateTask(
   context: Parameters<CommandHandler>[0],
   updates: Record<string, unknown>
@@ -125,6 +146,7 @@ async function updateTask(
     ...target,
     updates
   })
+  assertClickUpMutationOk(response)
   printResult(response, context.json, formatClickUpMutation)
 }
 
@@ -174,9 +196,8 @@ export const CLICKUP_HANDLERS: Record<string, CommandHandler> = {
       ...target,
       body: getRequiredStringFlag(context.flags, 'body')
     })
-    printResult(response, context.json, (result) =>
-      result.ok ? 'Added comment to ClickUp task.' : (result.error ?? 'Failed to add comment.')
-    )
+    assertClickUpMutationOk(response)
+    printResult(response, context.json, () => 'Added comment to ClickUp task.')
   },
   'clickup create': async ({ flags, client, json }) => {
     const response = await client.call<ClickUpCreateTaskResult>('clickup.createTask', {
@@ -188,6 +209,7 @@ export const CLICKUP_HANDLERS: Record<string, CommandHandler> = {
       dueDate: flags.has('due-date') ? getDueDate(flags, 'due-date') : undefined,
       workspaceId: getOptionalStringFlag(flags, 'workspace')
     })
+    assertClickUpCreateOk(response)
     printResult(response, json, formatClickUpCreate)
   }
 }

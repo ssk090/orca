@@ -102,17 +102,19 @@ describe('orca clickup CLI handlers', () => {
   it('creates a task with the selected List and Workspace', async () => {
     call.mockResolvedValueOnce({ result: { ok: false, error: 'No access' } })
 
-    await CLICKUP_HANDLERS['clickup create']({
-      flags: new Map([
-        ['list', 'list-1'],
-        ['title', 'Fix auth'],
-        ['body', 'Details'],
-        ['workspace', 'team-1']
-      ]),
-      client,
-      cwd: '/tmp/worktree',
-      json: true
-    })
+    await expect(
+      CLICKUP_HANDLERS['clickup create']({
+        flags: new Map([
+          ['list', 'list-1'],
+          ['title', 'Fix auth'],
+          ['body', 'Details'],
+          ['workspace', 'team-1']
+        ]),
+        client,
+        cwd: '/tmp/worktree',
+        json: true
+      })
+    ).rejects.toMatchObject({ code: 'clickup_write_failed' })
 
     expect(call).toHaveBeenCalledWith('clickup.createTask', {
       listId: 'list-1',
@@ -229,5 +231,21 @@ describe('orca clickup CLI handlers', () => {
       })
     ).rejects.toMatchObject({ code: 'invalid_argument' })
     expect(call).not.toHaveBeenCalled()
+  })
+
+  it('exits with clickup_write_failed when ClickUp rejects a mutation', async () => {
+    call.mockResolvedValueOnce({ result: { ok: false, error: 'Unknown status' } })
+
+    await expect(
+      CLICKUP_HANDLERS['clickup status set']({
+        flags: new Map([
+          ['id', '86abc123'],
+          ['to', 'done']
+        ]),
+        client,
+        cwd: '/tmp/worktree',
+        json: true
+      })
+    ).rejects.toMatchObject({ code: 'clickup_write_failed' })
   })
 })

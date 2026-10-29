@@ -1,5 +1,7 @@
+import { CLICKUP_CUSTOM_TASK_ID_PATTERN } from '../../shared/clickup-task-url'
 import type { ClickUpComment, ClickUpCommentResult } from '../../shared/clickup-types'
 import { clickUpRequest, requireClickUpClient } from './client'
+import { getClickUpTaskInWorkspace } from './task-lookup'
 import {
   asRecord,
   asString,
@@ -23,14 +25,30 @@ function commentBody(value: unknown): string {
     .join('')
 }
 
+async function resolveCommentTaskId(
+  taskId: string,
+  workspaceId?: string
+): Promise<{ taskId: string; workspaceId?: string }> {
+  if (!CLICKUP_CUSTOM_TASK_ID_PATTERN.test(taskId)) {
+    return { taskId, workspaceId }
+  }
+  const client = requireClickUpClient(workspaceId)
+  const task = await getClickUpTaskInWorkspace(client, taskId, { tolerateMisses: false })
+  if (!task) {
+    throw new Error('ClickUp task not found.')
+  }
+  return { taskId: task.id, workspaceId: workspaceId ?? task.workspaceId }
+}
+
 export async function getClickUpTaskComments(
   taskId: string,
   workspaceId?: string
 ): Promise<ClickUpComment[]> {
-  const client = requireClickUpClient(workspaceId)
+  const resolved = await resolveCommentTaskId(taskId, workspaceId)
+  const client = requireClickUpClient(resolved.workspaceId)
   const response = await clickUpRequest<{ comments?: unknown[] }>(
     client,
-    `/task/${encodeURIComponent(taskId)}/comment`
+    `/task/${encodeURIComponent(resolved.taskId)}/comment`
   )
   return (response.comments ?? []).flatMap((value) => {
     const record = asRecord(value)
@@ -54,10 +72,11 @@ export async function addClickUpTaskComment(
   workspaceId?: string
 ): Promise<ClickUpCommentResult> {
   try {
-    const client = requireClickUpClient(workspaceId)
+    const resolved = await resolveCommentTaskId(taskId, workspaceId)
+    const client = requireClickUpClient(resolved.workspaceId)
     const response = await clickUpRequest<JsonRecord>(
       client,
-      `/task/${encodeURIComponent(taskId)}/comment`,
+      `/task/${encodeURIComponent(resolved.taskId)}/comment`,
       {
         method: 'POST',
         body: JSON.stringify({ comment_text: body, notify_all: false })

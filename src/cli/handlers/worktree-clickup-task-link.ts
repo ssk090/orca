@@ -25,15 +25,16 @@ export function getOptionalClickUpTaskLinkFlag(
     }
     return { linkedClickUpTaskId: null, linkedClickUpWorkspaceId: null }
   }
-  const taskId = parseClickUpTaskReference(raw)
-  if (!taskId) {
+  const parsed = parseClickUpTaskReference(raw)
+  if (!parsed) {
     throw new RuntimeClientError(
       'invalid_argument',
       '--clickup-task must be a ClickUp task ID or app.clickup.com/t URL.'
     )
   }
   return {
-    linkedClickUpTaskId: taskId,
-    linkedClickUpWorkspaceId: typeof workspace === 'string' ? workspace.trim() : null
+    linkedClickUpTaskId: parsed.taskId,
+    linkedClickUpWorkspaceId:
+      typeof workspace === 'string' ? workspace.trim() : (parsed.workspaceId ?? null)
   }
 }
