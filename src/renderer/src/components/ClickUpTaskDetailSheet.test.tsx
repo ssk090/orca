@@ -97,6 +97,37 @@ describe('ClickUp task saves', () => {
     expect(mocks.patch).not.toHaveBeenCalled()
   })
 
+  it('keeps edits typed while a save is pending', async () => {
+    const refreshed: ClickUpTask = { ...task, name: 'Renamed', updatedAt: '1' }
+    let resolveRefresh: (value: ClickUpTask) => void = () => {}
+    mocks.refresh.mockImplementation(
+      () =>
+        new Promise<ClickUpTask>((resolve) => {
+          resolveRefresh = resolve
+        })
+    )
+    const onTaskChanged = vi.fn()
+    render(
+      <ClickUpTaskDetailSheet
+        task={task}
+        sourceContext={null}
+        onClose={vi.fn()}
+        onStartWorkspace={vi.fn()}
+        onTaskChanged={onTaskChanged}
+      />
+    )
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Renamed' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(mocks.update).toHaveBeenCalled())
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: 'Renamed while saving' }
+    })
+    resolveRefresh(refreshed)
+    await waitFor(() => expect(mocks.patch).toHaveBeenCalledWith('abc', refreshed, null))
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('Renamed while saving')
+    expect(onTaskChanged).not.toHaveBeenCalled()
+  })
+
   it('patches caches but does not reopen the sheet after a late save', async () => {
     const refreshed: ClickUpTask = { ...task, name: 'Renamed', updatedAt: '1' }
     let resolveRefresh: (value: ClickUpTask) => void = () => {}

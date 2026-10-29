@@ -66,6 +66,8 @@ export function ClickUpTaskDetailSheet({
   const [error, setError] = useState<string | null>(null)
   const taskRef = useRef(task)
   taskRef.current = task
+  const draftRef = useRef({ name, description, status, priority, dueDate })
+  draftRef.current = { name, description, status, priority, dueDate }
 
   useEffect(() => {
     if (!task) {
@@ -160,12 +162,13 @@ export function ClickUpTaskDetailSheet({
     if (refreshed) {
       patchTask(savedTaskId, refreshed, sourceContext)
       const stillOnTask = taskRef.current?.id === savedTaskId
+      const currentDraft = draftRef.current
       const draftUnchanged =
-        name.trim() === savedDraft.name &&
-        description === savedDraft.description &&
-        status === savedDraft.status &&
-        priority === savedDraft.priority &&
-        dueDate === savedDraft.dueDate
+        currentDraft.name.trim() === savedDraft.name &&
+        currentDraft.description === savedDraft.description &&
+        currentDraft.status === savedDraft.status &&
+        currentDraft.priority === savedDraft.priority &&
+        currentDraft.dueDate === savedDraft.dueDate
       if (stillOnTask && draftUnchanged) {
         onTaskChanged(refreshed)
       }
