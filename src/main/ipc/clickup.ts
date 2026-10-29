@@ -156,6 +156,7 @@ export function registerClickUpHandlers(): void {
         limit?: number
         workspaceId?: ClickUpWorkspaceSelection
         scope?: ClickUpTaskScope
+        force?: boolean
       }
     ) => {
       if (typeof args?.query !== 'string') {
@@ -165,7 +166,8 @@ export function registerClickUpHandlers(): void {
         args.query,
         clampLimit(args.limit, 20),
         workspaceSelection(args.workspaceId),
-        normalizeClickUpTaskScope(args.scope)
+        normalizeClickUpTaskScope(args.scope),
+        args.force === true
       )
     }
   )

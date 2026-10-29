@@ -13,6 +13,7 @@ import {
   syncClickUpWorktreeStatus,
   type WorkspaceBoardClickUpStatusSyncDependencies
 } from './workspace-board-clickup-status-sync'
+import type { RuntimeClickUpSettings } from '@/runtime/runtime-clickup-client'
 export { getWorkspaceBoardTaskStatusSyncRequest } from './workspace-board-task-status-sync-request'
 
 export type WorkspaceBoardTaskStatusSyncResult = {
@@ -28,7 +29,7 @@ export type WorkspaceBoardTaskStatusSyncMessage =
   | { kind: 'ambiguous-workflow-state'; statusLabel: string; provider?: 'ClickUp' }
   | { kind: 'update-failed'; issueIdentifier: string; detail?: string; provider?: 'ClickUp' }
   | { kind: 'provider-error'; issueIdentifier: string; detail?: string; provider?: 'ClickUp' }
-  | { kind: 'owner-ambiguous'; issueIdentifier: string }
+  | { kind: 'owner-ambiguous'; issueIdentifier: string; provider?: 'ClickUp' }
   | { kind: 'unexpected-error'; detail?: string }
 
 type WorkspaceBoardTaskStatusSyncDependencies = WorkspaceBoardClickUpStatusSyncDependencies & {
@@ -54,6 +55,7 @@ export type SyncWorkspaceBoardTaskStatusesArgs = {
   settings?: RuntimeLinearSettings
   /** `null` refuses the worktree: its owner is ambiguous, so no host's Linear settings apply. */
   getSettingsForWorktree?: (worktreeId: string) => RuntimeLinearSettings | null
+  getClickUpSettingsForWorktree?: (worktreeId: string) => RuntimeClickUpSettings | null
   getLatestWorkspaceStatus: (worktreeId: string) => WorkspaceStatus | null | undefined
   deps?: Partial<WorkspaceBoardTaskStatusSyncDependencies>
 }

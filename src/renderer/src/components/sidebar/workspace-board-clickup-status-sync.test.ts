@@ -73,6 +73,26 @@ describe('ClickUp board status sync', () => {
     expect(deps.updateClickUpTask).not.toHaveBeenCalled()
   })
 
+  it('routes omitted settings as undefined to the runtime client', async () => {
+    const deps = {
+      getClickUpTask: vi.fn().mockResolvedValue(task),
+      listClickUpLists: vi.fn().mockResolvedValue([{ id: 'list-1', statuses: [{ name: 'Done' }] }]),
+      updateClickUpTask: vi.fn().mockResolvedValue({ ok: true })
+    }
+    await syncClickUpWorktreeStatus(
+      {
+        targetStatus: { id: 'done', label: 'Done' },
+        worktreesById: new Map([
+          ['wt', { linkedClickUpTaskId: 'abc', linkedClickUpWorkspaceId: 'team-1' }]
+        ]),
+        getLatestWorkspaceStatus: () => 'done'
+      },
+      'wt',
+      deps
+    )
+    expect(deps.getClickUpTask).toHaveBeenCalledWith(undefined, 'abc', 'team-1')
+  })
+
   it('skips when owner refuses settings without calling ClickUp', async () => {
     const deps = {
       getClickUpTask: vi.fn(),
@@ -97,7 +117,7 @@ describe('ClickUp board status sync', () => {
       updated: 0,
       skipped: 1,
       failed: 0,
-      messages: [{ kind: 'owner-ambiguous', issueIdentifier: 'abc' }]
+      messages: [{ kind: 'owner-ambiguous', issueIdentifier: 'abc', provider: 'ClickUp' }]
     })
   })
 })

@@ -182,7 +182,21 @@ describe('searchClickUpTasks', () => {
     await expect(searchClickUpTasks('abc123', 1, 'team-1')).resolves.toMatchObject([{ id: 'x' }])
   })
 
-  it('stops paging an older query once a newer one starts', async () => {
+  it('filters exact id hits through the active task scope', async () => {
+    clickUpRequestMock.mockResolvedValue(
+      rawTask('86abc123', 'Scoped', {
+        list: { id: 'list-2', name: 'Other' },
+        space: { id: 'space-2', name: 'Other space' }
+      })
+    )
+    const { searchClickUpTasks } = await import('./task-search')
+
+    await expect(
+      searchClickUpTasks('86abc123', 5, 'team-1', { listIds: ['list-1'] })
+    ).resolves.toEqual([])
+  })
+
+  it('stops paging an older search once a newer one starts for the same query', async () => {
     let releaseFirst: () => void = () => undefined
     const gate = new Promise<void>((resolve) => {
       releaseFirst = resolve
@@ -196,14 +210,13 @@ describe('searchClickUpTasks', () => {
     })
     const { searchClickUpTasks } = await import('./task-search')
 
-    const older = searchClickUpTasks('first', 5, 'team-1')
+    const older = searchClickUpTasks('same-query', 5, 'team-1')
     const olderResult = expect(older).rejects.toThrow('newer ClickUp search')
-    const newer = searchClickUpTasks('second', 5, 'team-1')
+    const newer = searchClickUpTasks('same-query', 5, 'team-1')
     releaseFirst()
     await olderResult
     await newer
     const openCallsForOlder = clickUpRequestMock.mock.calls.length
-    // The newer search walks its own caps; the older one issued no open pages.
     expect(openCallsForOlder).toBe(18)
   })
 })

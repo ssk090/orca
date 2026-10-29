@@ -2691,6 +2691,7 @@
         "345b169f1f": "High",
         "f373ab1a4f": "Urgent",
         "713179dfdc": "No priority",
+        "616cce0eda": "ClickUp",
         "c8d5bec5f7": "Priority",
         "42a9160321": "Unassigned",
         "d2a876ca53": "Assignee",
@@ -6758,7 +6759,10 @@
           "e9f0a1b2c3": "{{value0}} failed",
           "clickUpTaskReadFailed": "ClickUp task {{value0}} could not be read.",
           "clickUpTaskUpdateFailed": "Could not update ClickUp task {{value0}}.",
-          "clickUpTaskSyncFailed": "Could not sync ClickUp task {{value0}}."
+          "clickUpTaskSyncFailed": "Could not sync ClickUp task {{value0}}.",
+          "clickUpStatusMissing": "No matching ClickUp status for {{value0}}.",
+          "clickUpStatusAmbiguous": "Multiple ClickUp statuses match {{value0}}.",
+          "clickUpOwnerAmbiguous": "Skipped ClickUp task {{value0}}: this workspace is on more than one host."
         },
         "WorktreeParentPickerPopover": {
           "failedSetParent": "Failed to set parent worktree",

@@ -41,7 +41,8 @@ export const ClickUpSearchTasks = z.object({
   query: requiredString('Search query is required'),
   limit: OptionalFiniteNumber,
   workspaceId: OptionalString,
-  scope: ClickUpTaskScopeParams
+  scope: ClickUpTaskScopeParams,
+  force: z.boolean().optional()
 })
 
 export const ClickUpListTasks = z

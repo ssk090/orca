@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../types'
-import type { ClickUpTask } from '../../../../shared/clickup-types'
+import type { ClickUpTask, ClickUpWorkspaceSelection } from '../../../../shared/clickup-types'
 import {
   clickUpConnect,
   clickUpDisconnect,
@@ -61,6 +61,19 @@ function getReadScope(
 
 function scopedKey(scope: ClickUpReadScope, key: string): string {
   return clickUpCacheKey(scope.cachePrefix, key)
+}
+
+function workspaceSelectionForScope(
+  state: AppState,
+  scope: ClickUpReadScope
+): ClickUpWorkspaceSelection | null {
+  if (!scope.explicitSource) {
+    return selectedWorkspaceId(state.clickUpStatus)
+  }
+  if (state.clickUpStatusContextKey === scope.contextKey) {
+    return selectedWorkspaceId(state.clickUpStatus)
+  }
+  return null
 }
 
 export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = (set, get) => ({
@@ -206,7 +219,7 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
 
   searchClickUpTasks: async (query, limit = 20, options) => {
     const scope = getReadScope(get().settings, options?.sourceContext)
-    const workspaceId = selectedWorkspaceId(get().clickUpStatus)
+    const workspaceId = workspaceSelectionForScope(get(), scope)
     const key = scopedKey(
       scope,
       `${workspaceId ?? 'default'}::search::${query}::${limit}::${taskScopeKey(options?.taskScope)}`
@@ -221,7 +234,8 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
       query,
       limit,
       workspaceId,
-      options?.taskScope
+      options?.taskScope,
+      options?.force === true
     )
     if (
       generation !== mutationGeneration ||
@@ -250,7 +264,7 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
 
   listClickUpTasks: async (filter = 'assigned', limit = 50, options) => {
     const scope = getReadScope(get().settings, options?.sourceContext)
-    const workspaceId = selectedWorkspaceId(get().clickUpStatus)
+    const workspaceId = workspaceSelectionForScope(get(), scope)
     const key = scopedKey(
       scope,
       `${workspaceId ?? 'default'}::list::${filter}::${limit}::${taskScopeKey(options?.taskScope)}`

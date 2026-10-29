@@ -49,7 +49,13 @@ export const CLICKUP_METHODS = [
     permission: 'workspace',
     params: ClickUpSearchTasks,
     handler: async (params, { runtime }) =>
-      runtime.clickUpSearchTasks(params.query, params.limit, params.workspaceId, params.scope)
+      runtime.clickUpSearchTasks(
+        params.query,
+        params.limit,
+        params.workspaceId,
+        params.scope,
+        params.force
+      )
   }),
   defineMethod({
     name: 'clickup.listTasks',

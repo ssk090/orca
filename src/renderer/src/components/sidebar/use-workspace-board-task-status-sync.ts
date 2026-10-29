@@ -5,6 +5,11 @@ import { getRuntimeTargetForWorktreeOwner } from '@/lib/file-owner-runtime-targe
 import { warnAmbiguousOwnerOnce } from '@/lib/ambiguous-owner-warning'
 import type { WorktreeOperationRouteState } from '@/lib/worktree-operation-route'
 import type { RuntimeLinearSettings } from '@/runtime/runtime-linear-client'
+import type { RuntimeClickUpSettings } from '@/runtime/runtime-clickup-client'
+import {
+  normalizeStoredTaskSourceContext,
+  getTaskSourceRuntimeSettings
+} from '../../../../shared/task-source-context'
 import { translate } from '@/i18n/i18n'
 import type {
   WorkspaceStatus,
@@ -86,6 +91,13 @@ function formatTaskStatusSyncMessage(message: WorkspaceBoardTaskStatusSyncMessag
         { value0: message.issueIdentifier }
       )
     case 'owner-ambiguous':
+      if (message.provider === 'ClickUp') {
+        return translate(
+          'auto.components.sidebar.WorkspaceKanbanDrawer.clickUpOwnerAmbiguous',
+          'Skipped ClickUp task {{value0}}: this workspace is on more than one host.',
+          { value0: message.issueIdentifier }
+        )
+      }
       return translate(
         'auto.components.sidebar.WorkspaceKanbanDrawer.f0a1b2c3d4',
         'Skipped Linear issue {{value0}}: this workspace is on more than one host.',
@@ -170,6 +182,26 @@ export function linearSettingsForBoardWorktree(
   return target
 }
 
+export function clickUpSettingsForBoardWorktree(
+  state: WorktreeOperationRouteState & {
+    getKnownWorktreeById: (worktreeId: string) => { linkedTaskSourceContext?: unknown } | undefined
+  },
+  worktreeId: string
+): RuntimeClickUpSettings | null {
+  const source = normalizeStoredTaskSourceContext(
+    state.getKnownWorktreeById(worktreeId)?.linkedTaskSourceContext
+  )
+  if (source?.provider === 'clickup') {
+    return getTaskSourceRuntimeSettings(source)
+  }
+  const target = getRuntimeTargetForWorktreeOwner(state, worktreeId)
+  if (!target) {
+    warnAmbiguousOwnerOnce(worktreeId, 'sync a board task status')
+    return null
+  }
+  return target
+}
+
 export function useWorkspaceBoardTaskStatusSync(args: {
   enabled: boolean
   worktreesById: ReadonlyMap<string, Worktree>
@@ -193,6 +225,8 @@ export function useWorkspaceBoardTaskStatusSync(args: {
         worktreesById: args.worktreesById,
         getSettingsForWorktree: (worktreeId) =>
           linearSettingsForBoardWorktree(useAppStore.getState(), worktreeId),
+        getClickUpSettingsForWorktree: (worktreeId) =>
+          clickUpSettingsForBoardWorktree(useAppStore.getState(), worktreeId),
         getLatestWorkspaceStatus: (worktreeId) =>
           useAppStore.getState().getKnownWorktreeById(worktreeId)?.workspaceStatus
       })

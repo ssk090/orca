@@ -1,4 +1,4 @@
-import type { ClickUpTaskScope } from '../../shared/clickup-types'
+import type { ClickUpTask, ClickUpTaskScope } from '../../shared/clickup-types'
 import { asRecord } from './json-record'
 
 // Bounds what one request may carry so a hostile or buggy caller cannot build
@@ -83,4 +83,27 @@ export function clickUpTaskScopeKey(scope?: ClickUpTaskScope): string {
     [...(scope.listIds ?? [])].sort(),
     [...(scope.statuses ?? [])].sort()
   ])
+}
+
+function normalizedScopeToken(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+export function clickUpTaskMatchesScope(task: ClickUpTask, scope?: ClickUpTaskScope): boolean {
+  if (!scope) {
+    return true
+  }
+  if (scope.spaceId && task.space?.id !== scope.spaceId) {
+    return false
+  }
+  if (scope.listIds?.length && !scope.listIds.includes(task.list.id)) {
+    return false
+  }
+  if (scope.statuses?.length) {
+    const statusName = normalizedScopeToken(task.status.name)
+    if (!scope.statuses.some((status) => normalizedScopeToken(status) === statusName)) {
+      return false
+    }
+  }
+  return true
 }

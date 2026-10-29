@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useShallow } from 'zustand/react/shallow'
-import { useAppStore } from '@/store'
 import type { ClickUpTask } from '../../../../shared/clickup-types'
 import { buildTaskSourceContextFromRepo } from '../../../../shared/task-source-context'
 import type { SmartNameMode } from '../../../../shared/new-workspace/smart-workspace-source-results'
 import { RESULT_LIMIT, type RepoOption } from './smart-workspace-name-field-model'
+import { useClickUpSourceConnection } from './use-clickup-source-connection'
+import { clickUpListTasks, clickUpSearchTasks } from '@/runtime/runtime-clickup-client'
 
-/** ClickUp search for the composer source picker; account-backed like Linear. */
 export function useClickUpSourceSearch({
   enabled,
   mode,
@@ -20,18 +19,6 @@ export function useClickUpSourceSearch({
   sourceQueryWithinLimit: boolean
   selectedRepo: RepoOption | null
 }) {
-  const { status, statusChecked, checkConnection, listTasks, searchTasks } = useAppStore(
-    useShallow((s) => ({
-      status: s.clickUpStatus,
-      statusChecked: s.clickUpStatusChecked,
-      checkConnection: s.checkClickUpConnection,
-      listTasks: s.listClickUpTasks,
-      searchTasks: s.searchClickUpTasks
-    }))
-  )
-  const [clickUpTasks, setClickUpTasks] = useState<ClickUpTask[]>([])
-  const [clickUpLoading, setClickUpLoading] = useState(false)
-  const clickUpAvailable = enabled && status.connected === true
   const clickUpSourceContext = useMemo(
     () =>
       selectedRepo
@@ -43,18 +30,19 @@ export function useClickUpSourceSearch({
         : null,
     [selectedRepo]
   )
-
-  useEffect(() => {
-    if (enabled && !statusChecked) {
-      void checkConnection()
-    }
-  }, [checkConnection, enabled, statusChecked])
+  const connection = useClickUpSourceConnection({
+    enabled,
+    sourceContext: clickUpSourceContext
+  })
+  const clickUpAvailable = enabled && connection.loaded && connection.status?.connected === true
+  const [clickUpTasks, setClickUpTasks] = useState<ClickUpTask[]>([])
+  const [clickUpLoading, setClickUpLoading] = useState(false)
 
   const shouldQuery =
     clickUpAvailable && sourceQueryWithinLimit && (mode === 'smart' || mode === 'clickup')
 
   useEffect(() => {
-    if (!shouldQuery) {
+    if (!shouldQuery || !clickUpSourceContext) {
       setClickUpTasks([])
       setClickUpLoading(false)
       return
@@ -63,8 +51,8 @@ export function useClickUpSourceSearch({
     setClickUpLoading(true)
     const trimmed = debouncedQuery.trim()
     const request = trimmed
-      ? searchTasks(trimmed, RESULT_LIMIT, { sourceContext: clickUpSourceContext })
-      : listTasks('assigned', RESULT_LIMIT, { sourceContext: clickUpSourceContext })
+      ? clickUpSearchTasks(clickUpSourceContext, trimmed, RESULT_LIMIT)
+      : clickUpListTasks(clickUpSourceContext, 'assigned', RESULT_LIMIT)
     void request
       .then((tasks) => {
         if (!stale) {
@@ -84,7 +72,7 @@ export function useClickUpSourceSearch({
     return () => {
       stale = true
     }
-  }, [clickUpSourceContext, debouncedQuery, listTasks, searchTasks, shouldQuery])
+  }, [clickUpSourceContext, debouncedQuery, shouldQuery])
 
   return { clickUpAvailable, clickUpTasks, clickUpLoading, clickUpSourceContext }
 }

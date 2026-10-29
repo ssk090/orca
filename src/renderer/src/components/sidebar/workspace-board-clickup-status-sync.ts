@@ -26,6 +26,7 @@ type WorkspaceBoardClickUpStatusSyncArgs = {
   >
   settings?: RuntimeClickUpSettings
   getSettingsForWorktree?: (worktreeId: string) => RuntimeClickUpSettings | null
+  getClickUpSettingsForWorktree?: (worktreeId: string) => RuntimeClickUpSettings | null
   getLatestWorkspaceStatus: (worktreeId: string) => WorkspaceStatus | null | undefined
 }
 
@@ -59,14 +60,17 @@ export async function syncClickUpWorktreeStatus(
     result.skipped += 1
     return result
   }
-  const settings = args.getSettingsForWorktree
-    ? args.getSettingsForWorktree(worktreeId)
-    : (args.settings ?? { kind: 'local' })
-  if (!settings) {
+  const settings = args.getClickUpSettingsForWorktree
+    ? args.getClickUpSettingsForWorktree(worktreeId)
+    : args.getSettingsForWorktree
+      ? args.getSettingsForWorktree(worktreeId)
+      : (args.settings ?? undefined)
+  if (settings === null) {
     result.skipped += 1
     result.messages.push({
       kind: 'owner-ambiguous',
-      issueIdentifier: worktree.linkedClickUpTaskId
+      issueIdentifier: worktree.linkedClickUpTaskId,
+      provider: 'ClickUp'
     })
     return result
   }

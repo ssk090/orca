@@ -1,10 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import {
   appendClickUpTaskScope,
+  clickUpTaskMatchesScope,
   clickUpTaskPagePath,
   clickUpTaskScopeKey,
   normalizeClickUpTaskScope
 } from './task-scope'
+import type { ClickUpTask } from '../../shared/clickup-types'
+
+const sampleTask = {
+  id: 'abc',
+  workspaceId: 'team-1',
+  name: 'Task',
+  url: 'https://app.clickup.com/t/abc',
+  status: { name: 'Open', color: '', type: 'custom', orderIndex: 0 },
+  priority: null,
+  assignees: [],
+  tags: [],
+  list: { id: 'list-1', name: 'Backlog' },
+  space: { id: 'space-1', name: 'Space' },
+  createdAt: '',
+  updatedAt: ''
+} satisfies ClickUpTask
 
 describe('ClickUp task scope', () => {
   it('drops empty or malformed scope input', () => {
@@ -57,5 +74,11 @@ describe('ClickUp task scope', () => {
     expect(clickUpTaskScopeKey({ spaceId: 's', statuses: ['b', 'a'] })).toBe(
       clickUpTaskScopeKey({ spaceId: 's', statuses: ['a', 'b'] })
     )
+  })
+
+  it('matches scoped tasks case-insensitively on status', () => {
+    expect(clickUpTaskMatchesScope(sampleTask, { statuses: ['open'] })).toBe(true)
+    expect(clickUpTaskMatchesScope(sampleTask, { listIds: ['list-2'] })).toBe(false)
+    expect(clickUpTaskMatchesScope(sampleTask, { spaceId: 'space-2' })).toBe(false)
   })
 })

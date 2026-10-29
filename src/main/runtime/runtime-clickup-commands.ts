@@ -53,9 +53,16 @@ export class RuntimeClickUpCommands {
     query: string,
     limit = 20,
     workspaceId?: ClickUpWorkspaceSelection,
-    scope?: ClickUpTaskScope
+    scope?: ClickUpTaskScope,
+    force?: boolean
   ): ReturnType<typeof searchTasks> {
-    return searchTasks(query, clampLimit(limit), workspaceId, normalizeClickUpTaskScope(scope))
+    return searchTasks(
+      query,
+      clampLimit(limit),
+      workspaceId,
+      normalizeClickUpTaskScope(scope),
+      force
+    )
   }
 
   clickUpListTasks(

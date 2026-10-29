@@ -70,7 +70,7 @@ describe('ClickUp RPC methods', () => {
     await dispatcher.dispatch(makeRequest('clickup.listLists', { workspaceId: 'team-1' }))
 
     expect(runtime.clickUpConnect).toHaveBeenCalledWith('pk_token')
-    expect(runtime.clickUpSearchTasks).toHaveBeenCalledWith('auth', 10, 'all', undefined)
+    expect(runtime.clickUpSearchTasks).toHaveBeenCalledWith('auth', 10, 'all', undefined, undefined)
     expect(runtime.clickUpListTasks).toHaveBeenCalledWith('assigned', 20, 'team-1', undefined)
     expect(runtime.clickUpGetTask).toHaveBeenCalledWith('abc', 'team-1')
     expect(runtime.clickUpCreateTask).toHaveBeenCalledWith({

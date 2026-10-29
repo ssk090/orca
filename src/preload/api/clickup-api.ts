@@ -33,12 +33,14 @@ export type ClickUpApi = {
     limit?: number
     workspaceId?: ClickUpWorkspaceSelection
     scope?: ClickUpTaskScope
+    force?: boolean
   }) => Promise<ClickUpTask[]>
   listTasks: (args?: {
     filter?: ClickUpTaskFilter
     limit?: number
     workspaceId?: ClickUpWorkspaceSelection
     scope?: ClickUpTaskScope
+    force?: boolean
   }) => Promise<ClickUpTask[]>
   getTask: (args: { taskId: string; workspaceId?: string }) => Promise<ClickUpTask | null>
   createTask: (args: ClickUpCreateTaskArgs) => Promise<ClickUpCreateTaskResult>
