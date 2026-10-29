@@ -1009,7 +1009,7 @@ const ORCA_CLICKUP_MARKDOWN = [
   "2. Add a concise completion comment if the user or project workflow expects one.",
   "3. Include the PR/MR URL in that comment when available.",
   "4. Move the task only to the exact review or completed status requested by trusted instructions.",
-  "5. Treat a command as successful only when JSON output shows `ok: true` (or the task read confirms the change). Report failures when `ok` is false or the command exits with an error.",
+  "5. Report any ClickUp write failure; do not claim the task changed unless the command succeeded (exit status 0 and, with `--json`, `ok: true`).",
   "",
   "## Errors and Unconfirmed Writes",
   "",

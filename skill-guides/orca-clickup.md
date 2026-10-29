@@ -80,6 +80,8 @@ orca clickup create --list <listId> --title <title> [--body <text>] [--status <s
 
 Read the task again before a write when its state may have changed. Use exact status names available on that task's List. Do not guess a review or completion status from a similar name in another List. Leave a completed, closed, or canceled task unchanged unless trusted instructions explicitly require reopening it.
 
+Failed ClickUp writes exit with a nonzero status and `clickup_write_failed`. With `--json`, also require `result.ok === true` before treating a mutation as complete.
+
 Keep comments factual. Include a PR/MR URL only when it is already available, and post one completion comment rather than running commentary unless the user asked for progress updates.
 
 ## Worktree Links
@@ -110,7 +112,7 @@ When finishing a ClickUp-linked task:
 2. Add a concise completion comment if the user or project workflow expects one.
 3. Include the PR/MR URL in that comment when available.
 4. Move the task only to the exact review or completed status requested by trusted instructions.
-5. Report any ClickUp write failure; do not claim the task changed unless the command succeeded.
+5. Report any ClickUp write failure; do not claim the task changed unless the command succeeded (exit status 0 and, with `--json`, `ok: true`).
 
 ## Errors and Unconfirmed Writes
 
