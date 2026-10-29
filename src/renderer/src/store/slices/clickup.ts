@@ -66,6 +66,19 @@ function getReadScope(
   }
 }
 
+// Why: a read may only fill the cache if no write landed meanwhile and, for the active runtime, the
+// user has not switched runtimes. Explicit sources carry their own host, so a switch cannot stale them.
+function isCurrentRead(
+  settings: AppState['settings'],
+  generation: number,
+  scope: ClickUpReadScope
+): boolean {
+  return (
+    generation === mutationGeneration &&
+    (scope.explicitSource || scope.contextKey === getProviderRuntimeContextKey(settings))
+  )
+}
+
 function scopedKey(scope: ClickUpReadScope, key: string): string {
   return clickUpCacheKey(scope.cachePrefix, key)
 }
@@ -203,11 +216,7 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
     const generation = mutationGeneration
     const request = clickUpGetTask(scope.settings, taskId, workspaceId)
       .then((task) => {
-        if (
-          generation === mutationGeneration &&
-          (scope.explicitSource ||
-            scope.contextKey === getProviderRuntimeContextKey(get().settings))
-        ) {
+        if (isCurrentRead(get().settings, generation, scope)) {
           set((state) => ({
             clickUpTaskCache: evictStaleClickUpCacheEntries({
               ...state.clickUpTaskCache,
@@ -246,10 +255,7 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
       options?.taskScope,
       options?.force === true
     )
-    if (
-      generation !== mutationGeneration ||
-      (!scope.explicitSource && scope.contextKey !== getProviderRuntimeContextKey(get().settings))
-    ) {
+    if (!isCurrentRead(get().settings, generation, scope)) {
       return tasks
     }
     set((state) => ({
@@ -290,10 +296,7 @@ export const createClickUpSlice: StateCreator<AppState, [], [], ClickUpSlice> = 
       workspaceId,
       options?.taskScope
     )
-    if (
-      generation !== mutationGeneration ||
-      (!scope.explicitSource && scope.contextKey !== getProviderRuntimeContextKey(get().settings))
-    ) {
+    if (!isCurrentRead(get().settings, generation, scope)) {
       return tasks
     }
     set((state) => ({
