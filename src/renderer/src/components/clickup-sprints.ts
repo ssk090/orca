@@ -1,4 +1,5 @@
 import type { ClickUpList } from '../../../shared/clickup-types'
+import { getIntlLocale } from '@/i18n/i18n'
 
 export type ClickUpSprint = {
   listId: string
@@ -18,7 +19,6 @@ export type ClickUpSprintFolder = {
   sprints: ClickUpSprint[]
 }
 
-const SPRINT_NAME_COLLATOR = new Intl.Collator(undefined, { numeric: true })
 const SPRINT_PATTERN = /\bsprints?\b/i
 // "Sprint 12 (10/6 - 10/19)" — the Sprints ClickApp's default List name.
 const NAME_RANGE_PATTERN = /\((\d{1,2})\/(\d{1,2})\s*[-–]\s*(\d{1,2})\/(\d{1,2})\)/
@@ -62,7 +62,7 @@ function compareSprints(a: ClickUpSprint, b: ClickUpSprint): number {
   if (a.startDate || b.startDate) {
     return a.startDate ? -1 : 1
   }
-  return SPRINT_NAME_COLLATOR.compare(a.name, b.name)
+  return a.name.localeCompare(b.name, getIntlLocale(), { numeric: true })
 }
 
 export function detectClickUpSprints(

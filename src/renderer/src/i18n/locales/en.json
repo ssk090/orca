@@ -6229,7 +6229,6 @@
           "34f03eb0de": "Board settings",
           "26cbc92150": "Workspace board settings",
           "87d24a0c2f": "Sync board and issue status",
-          "4c2eaa78cc": "Moving a linked workspace updates its Linear issue status when a matching workflow state exists.",
           "taskTrackerSyncDescription": "Moving a linked workspace updates its Linear or ClickUp task when a matching status exists."
         },
         "WorkspaceKanbanStatusLane": {
@@ -18728,10 +18727,8 @@
         "filters": {
           "space": "Space",
           "allSpaces": "All Spaces",
-          "allSprints": "All sprints",
           "currentSprintNamed": "Current: {{name}}",
           "noCurrentSprint": "No current sprint",
-          "sprint": "Sprint",
           "currentSprint": "Current sprint",
           "anyStatus": "Any status",
           "statusCount": "{{count}} statuses",

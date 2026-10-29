@@ -1,7 +1,7 @@
 import { ArrowRight, ExternalLink } from 'lucide-react'
 import type { ClickUpTask } from '../../../shared/clickup-types'
 import { Button } from '@/components/ui/button'
-import { translate } from '@/i18n/i18n'
+import { getIntlLocale, translate } from '@/i18n/i18n'
 import { clickUpTaskReference } from './clickup-task-page-model'
 
 const TASK_GRID_COLUMNS = 'grid-cols-[110px_minmax(0,2fr)_140px_140px_110px_64px]'
@@ -81,7 +81,7 @@ export function ClickUpTaskListTable({
               <span className="truncate text-xs text-muted-foreground">{task.status.name}</span>
               <span className="truncate text-xs text-muted-foreground">{task.list.name}</span>
               <span className="text-xs text-muted-foreground">
-                {new Date(task.updatedAt).toLocaleDateString()}
+                {new Date(task.updatedAt).toLocaleDateString(getIntlLocale())}
               </span>
               <div className="flex items-center justify-end gap-1">
                 <Button

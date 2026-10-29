@@ -8,7 +8,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { translate } from '@/i18n/i18n'
+import { getIntlLocale, translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
 import {
   GANTT_DAY_WIDTH,
@@ -25,7 +25,7 @@ const ROW_HEIGHT = 28
 function barTitle(bar: GanttBar): string {
   const dates = [bar.task.startDate, bar.task.dueDate]
     .filter((value): value is string => Boolean(value))
-    .map((value) => new Date(value).toLocaleDateString())
+    .map((value) => new Date(value).toLocaleDateString(getIntlLocale()))
     .join(' → ')
   return `${clickUpTaskReference(bar.task)} ${bar.task.name}${dates ? ` (${dates})` : ''}`
 }
