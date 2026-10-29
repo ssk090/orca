@@ -25,6 +25,9 @@ import {
   type RowLessSource
 } from '@/lib/default-creation-host'
 import { isRuntimeProviderSearchQueryWithinLimit } from './runtime-provider-search-bounds'
+import { CLICKUP_WRITE_CLIENT_TIMEOUT_MS } from '../../../shared/clickup-timeouts'
+
+const CLICKUP_WRITE_TIMEOUT_MS = CLICKUP_WRITE_CLIENT_TIMEOUT_MS
 
 // Why: ClickUp is a row-less source like Linear and Jira. Store callers still
 // pass raw settings, which route to the default scope host.
@@ -105,7 +108,8 @@ export async function clickUpSearchTasks(
   query: string,
   limit?: number,
   workspaceId?: ClickUpWorkspaceSelection | null,
-  scope?: ClickUpTaskScope
+  scope?: ClickUpTaskScope,
+  force?: boolean
 ): Promise<ClickUpTask[]> {
   if (!isRuntimeProviderSearchQueryWithinLimit(query)) {
     return []
@@ -115,7 +119,8 @@ export async function clickUpSearchTasks(
     query,
     limit,
     workspaceId: workspaceId ?? undefined,
-    ...(scope ? { scope } : {})
+    ...(scope ? { scope } : {}),
+    ...(force ? { force: true } : {})
   }
   return target.kind === 'environment'
     ? callRuntimeRpc(target, 'clickup.searchTasks', params, { timeoutMs: 60_000 })
@@ -159,8 +164,8 @@ export async function clickUpCreateTask(
 ): Promise<ClickUpCreateTaskResult> {
   const target = targetFor(settings)
   return target.kind === 'environment'
-    ? callRuntimeRpc(target, 'clickup.createTask', args, { timeoutMs: 30_000 })
-    : withLocalTimeout(window.api.clickup.createTask(args), 30_000)
+    ? callRuntimeRpc(target, 'clickup.createTask', args, { timeoutMs: CLICKUP_WRITE_TIMEOUT_MS })
+    : withLocalTimeout(window.api.clickup.createTask(args), CLICKUP_WRITE_TIMEOUT_MS)
 }
 
 export async function clickUpUpdateTask(
@@ -172,8 +177,8 @@ export async function clickUpUpdateTask(
   const target = targetFor(settings)
   const params = { taskId, updates, workspaceId: workspaceId ?? undefined }
   return target.kind === 'environment'
-    ? callRuntimeRpc(target, 'clickup.updateTask', params, { timeoutMs: 30_000 })
-    : withLocalTimeout(window.api.clickup.updateTask(params), 30_000)
+    ? callRuntimeRpc(target, 'clickup.updateTask', params, { timeoutMs: CLICKUP_WRITE_TIMEOUT_MS })
+    : withLocalTimeout(window.api.clickup.updateTask(params), CLICKUP_WRITE_TIMEOUT_MS)
 }
 
 export async function clickUpAddTaskComment(
@@ -185,8 +190,10 @@ export async function clickUpAddTaskComment(
   const target = targetFor(settings)
   const params = { taskId, body, workspaceId: workspaceId ?? undefined }
   return target.kind === 'environment'
-    ? callRuntimeRpc(target, 'clickup.addTaskComment', params, { timeoutMs: 30_000 })
-    : withLocalTimeout(window.api.clickup.addTaskComment(params), 30_000)
+    ? callRuntimeRpc(target, 'clickup.addTaskComment', params, {
+        timeoutMs: CLICKUP_WRITE_TIMEOUT_MS
+      })
+    : withLocalTimeout(window.api.clickup.addTaskComment(params), CLICKUP_WRITE_TIMEOUT_MS)
 }
 
 export async function clickUpTaskComments(

@@ -14,7 +14,9 @@ const DEFAULT_REQUESTS_PER_MINUTE = 80
 const MINUTE_MS = 60_000
 // Why: one ClickUp window is a minute; a longer wait means a hostile or broken
 // header, so the request fails instead of hanging the UI.
-const MAX_RATE_LIMIT_WAIT_MS = 65_000
+import { CLICKUP_MAX_RATE_LIMIT_WAIT_MS } from '../../shared/clickup-timeouts'
+
+const MAX_RATE_LIMIT_WAIT_MS = CLICKUP_MAX_RATE_LIMIT_WAIT_MS
 const BASE_BACKOFF_MS = 1_000
 // Why: the reset header has second precision, so pad it to land after the window.
 const RESET_PADDING_MS = 250

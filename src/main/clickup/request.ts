@@ -8,7 +8,7 @@ const CLICKUP_API_BASE_URL = 'https://api.clickup.com/api/v2'
 // Why: a small pool keeps fan-out (List hierarchy, search paging) from bursting
 // through ClickUp's per-token minute budget.
 const MAX_CONCURRENT = 3
-const CLICKUP_REQUEST_TIMEOUT_MS = 30_000
+import { CLICKUP_REQUEST_TIMEOUT_MS } from '../../shared/clickup-timeouts'
 
 let running = 0
 const queue: (() => void)[] = []
